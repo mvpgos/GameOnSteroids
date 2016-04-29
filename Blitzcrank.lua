@@ -6,6 +6,8 @@ local ObjectManager={Minions={Enemies ={},Allies = {},Jungle = {}},Heroes={Enemi
 local aarange = GetRange(myHero)
 local AllyTeam = GetTeam(myHero)
 local attack_animation, move_issue, attack_windup, attack_issue = 0, 0, 0, 0
+local last_q, last_r = 0, 0
+local CanUseSpell, CanOrb = true, true
 
 -- M E N U
 Config = MenuConfig("GSO", "GamSterOn Blitzcrank")
@@ -64,6 +66,19 @@ OnProcessSpellAttack(function(unit, aa)
         end
 end)
 
+-- O N  S P E L L  C A S T
+OnSpellCast(function(spell)
+        local i = spell.spellID        
+        if i == _Q and GetTickCount() > last_q + 2000 then
+                CanOrb = false
+                last_q = GetTickCount()
+        end
+        if i == _R and GetTickCount() > last_r + 2000 then
+                CanOrb = false
+                last_r = GetTickCount()
+        end
+end)
+
 -- O N  U P D A T E  B U F F
 OnUpdateBuff(function(unit, buff)
         if unit == myHero then
@@ -112,22 +127,22 @@ end)
 -- O N  T I C K
 OnTick(function (myHero)
         if Config.o.co:Value() then
-                if Ready(_Q) then
+                if CanUseSpell and Ready(_Q) then
                         local t = SpellTarget(920, false)
                         if t ~= nil then
-                                local pos = GetPos(myHero, t, 6, 920, 1800, 0.25, 150)
+                                local pos = GetPos(myHero, t, 6, 920, 1800, 0.25, 120)
                                 if pos and pos.x ~= 0 then
                                         CastSkillShot(_Q, pos)
                                 end
                         end
-                elseif Ready(_R) then
+                elseif CanUseSpell and Ready(_R) then
                         local t = SpellTarget(550, false)
                         if t ~= nil then
                                 CastSpell(_R) 
                         end
                 end
                 Orb()
-                if Ready(_E) then
+                if CanUseSpell and Ready(_E) then
                         local t = SpellTarget(350, false)
                         if t ~= nil then
                                 CastSpell(_E) 
@@ -242,6 +257,11 @@ end
 function ComputeDistance(a, b)
         return math.sqrt( a^2 + b^2 )
 end
+function GetDist(a)
+        local x = myHero.pos.x - a.pos.x
+        local z = myHero.pos.z - a.pos.z
+        return math.sqrt( x^2 + z^2 )
+end
 
 -- D I R E C T I O N
 function ComputeDirection(a, b)
@@ -252,19 +272,33 @@ end
 
 -- O R B W A L K E R
 function Orb()
+        local speed = GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero)
         local aat = AATarget()
         if aat ~= nil then
+                local dist = ComputeDistance(aat.pos.x - myHero.pos.x, aat.pos.z - myHero.pos.z)
+                local time = ( 0.25 + ( dist / 1800 ) ) * 1000 + 100
                 if GetTickCount() > attack_animation then
-                        AttackUnit(aat)
-                end
-                if GetTickCount() > attack_windup then
-                        local pos = MovePred(aat)
-                        if pos and GetTickCount() > move_issue then
-                                MoveToXYZ(pos)
+                        CanUseSpell = false
+                        if CanOrb then
+                                AttackUnit(aat)
+                        elseif GetTickCount() > last_q + time and GetTickCount() > last_r + 350 then
+                                CanOrb = true
                         end
                 end
-        elseif GetTickCount() > attack_windup + 75 and GetTickCount() > move_issue then
-                MoveToXYZ(GetMousePos())
+                if GetTickCount() > attack_windup then
+                        CanUseSpell = true
+                        local pos = MovePred(aat)
+                        if pos then
+                                if GetTickCount() > move_issue then
+                                        MoveToXYZ(pos)
+                                end
+                        end
+                end
+        elseif GetTickCount() > attack_windup + 75 then
+                CanUseSpell = true
+                if GetTickCount() > move_issue then
+                        MoveToXYZ(GetMousePos())
+                end
         end
 end
 function MovePred(unit)
@@ -440,3 +474,5 @@ function Insert(t, o)
                 Immobile = {}
         }
 end
+
+PrintChat("Blitzgrab 1.2 Loaded")
