@@ -1,180 +1,198 @@
-local AllyTeam = GetTeam(myHero)
-
+-- V A R I A B L E S
+local UtilsManager = {}
 local ImmobileBuffs  = {}
+local WaypointManager = {}
+local ObjectManager={Minions={Enemies ={},Allies = {},Jungle = {}},Heroes={Enemies={},Allies={}},Turrets={Enemies={},Allies={}}}
+local aarange = GetRange(myHero)
+local AllyTeam = GetTeam(myHero)
+local attack_animation, move_issue, attack_windup, attack_issue = 0, 0, 0, 0
 
+-- M E N U
+Config = MenuConfig("GSO", "GamSterOn Blitzcrank")
+Config:Menu("o", "GamSterOn Orbwalker")
+Config.o:KeyBinding("co", "Combo", 32)
+
+-- O N  L O A D
 OnLoad(function()
         ImmobileBuffs = { [GetBuffTypeList().Stun] = true, [GetBuffTypeList().Taunt] = true, [GetBuffTypeList().Snare] = true, [GetBuffTypeList().Fear] = true, [GetBuffTypeList().Charm] = true, [GetBuffTypeList().Suppression] = true, [GetBuffTypeList().Flee] = true, [GetBuffTypeList().Knockup] = true, [GetBuffTypeList().Knockback] = true }
 end)
 
-local WaypointDataBase = {}
-
-local UtilsDataBase = {}
-
-local ObjectDataBase =
-{
-        Minions =
-        {
-                Enemies ={},
-                Allies = {},
-                Jungle = {}
-        },
-        Heroes =
-        {
-                Enemies = {},
-                Allies = {}
-        },
-        Turrets =
-        {
-                Enemies = {},
-                Allies = {}
-        }
-}
-
-OnCreateObj(function(o)
-        local name = GetObjectBaseName(o)
-        if AllyTeam == 100 then
-                if name:find("Minion_T200") then
-                        table.insert(ObjectDataBase.Minions.Enemies, o)
+-- O N  P R O C E S S  W A Y P  O I N T
+OnProcessWaypoint(function(unit,waypoint)
+        local id = GetNetworkID(unit)
+        local ms = GetMoveSpeed(unit)
+        if WaypointManager[id] then
+                if waypoint.index == 2 then
+                        WaypointManager[id].third = WaypointManager[id].second
+                        WaypointManager[id].second = WaypointManager[id].last
+                        WaypointManager[id].last.from = waypoint.position
+                        WaypointManager[id].last.time = GetTickCount()
                 end
-        else
-                if name:find("Minion_T100") then
-                        table.insert(ObjectDataBase.Minions.Enemies, o)
+                if waypoint.index == 1 then
+                        if GetTickCount() < WaypointManager[id].last.time + 25 then
+                                UtilsManager[id].CanMove = true
+                                local t = waypoint.position
+                                WaypointManager[id].last.to = t
+                                local f = WaypointManager[id].last.from
+                                local a = t.x - f.x
+                                local b = t.z - f.z
+                                local c = ComputeDistance(a, b)
+                                WaypointManager[id].last.dist = c
+                                WaypointManager[id].last.dir = { x = a/c, z = b/c }
+                                UtilsManager[id].IsMoving = true
+                        else
+                                UtilsManager[id].CanMove = false
+                                UtilsManager[id].LastStopMoveTime = GetTickCount()
+                                UtilsManager[id].IsMoving = false
+                        end
                 end
         end
 end)
 
-OnDeleteObj(function(o)
-        local id = GetNetworkID(o)
-        if WaypointDataBase[id] then
-                WaypointDataBase[id] = nil
+-- O N  P R O C E S S  S P E L L  A T T A C K
+OnProcessSpellAttack(function(unit, aa)
+        if unit == myHero then
+                local attack_spell = GetTickCount()
+                attack_windup = attack_windup + ( attack_spell - attack_issue )
+                attack_animation = attack_animation + ( attack_spell - attack_issue )
         end
-        if UtilsDataBase[id] then
-                UtilsDataBase[id] = nil
+        local id = GetNetworkID(unit)
+        if UtilsManager[id] then
+                UtilsManager[id].AACastDelay = aa.windUpTime
+                UtilsManager[id].AALast = GetTickCount()
+                UtilsManager[id].IsAttacking = true
         end
-        local count = #ObjectDataBase.Minions.Enemies
-        for i = 1, count do
-                if o == ObjectDataBase.Minions.Enemies[i] then
-                        table.remove(ObjectDataBase.Minions.Enemies, i)
-                        break
+end)
+
+-- O N  U P D A T E  B U F F
+OnUpdateBuff(function(unit, buff)
+        if unit == myHero then
+                local name = buff.Name
+                if name == "PowerFist" then
+                        attack_animation = 0
+                end
+        end
+        local id = GetNetworkID(unit)
+        if WaypointManager[id] then
+                local type = buff.Type
+                if ImmobileBuffs[type] then
+                        table.insert(UtilsManager[id].Immobile, { StartTime = GetTickCount(), EndTime = buff.ExpireTime } )
+                        UtilsManager[id].IsImmobile = true
                 end
         end
 end)
 
-OnObjectLoad(function(o)
-        if GetObjectType(o) == Obj_AI_Hero then
-                if GetTeam(o) == AllyTeam then
-                        Insert(ObjectDataBase.Heroes.Allies, o)
-                else
-                        Insert(ObjectDataBase.Heroes.Enemies, o)
-                end
-        end
-        if GetObjectType(o) == Obj_AI_Turret then
-                if GetTeam(o) == AllyTeam then
-                        table.insert(ObjectDataBase.Turrets.Allies, o)
-                else
-                        table.insert(ObjectDataBase.Turrets.Enemies, o)
+-- O N  R E M O V E  B U F F
+OnRemoveBuff(function(unit, buff)
+        local id = GetNetworkID(unit)
+        local et = buff.ExpireTime
+        if UtilsManager[id] then
+                for i, b in ipairs(UtilsManager[id].Immobile) do
+                        if b.EndTime == et then
+                                table.remove(UtilsManager[id].Immobile, i)
+                                break
+                        end
                 end
         end
 end)
 
-function Insert(t, o)
-        table.insert(t, o)
-        WaypointDataBase[GetNetworkID(o)] =
-        {
-                last =
-                {
-                        dir = {},
-                        time = 0,
-                        from = {},
-                        to = {},
-                        dist = 0,
-                        timeto = 0
-                },
-                second = {},
-                third = {}
-        }
-        UtilsDataBase[GetNetworkID(o)] =
-        {
-                CanMove = true,
-                IsMoving = false,
-                LastStopMoveTime = 0,
-                IsAttacking = false,
-                AALast = 0,
-                AACastDelay = 0,
-                IsImmobile = false,
-                Immobile = {}
-        }
-end
+-- O N  I S S U E  O R D E R
+OnIssueOrder(function(order)
+        if order.flag == 3 then
+                attack_issue = GetTickCount()
+                local speed = GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero)
+                attack_windup = attack_issue + ( 270 / speed )
+                attack_animation = attack_issue + ( 1000 / speed )
+        end
+        if order.flag == 2 then
+                move_issue = GetTickCount() + 175
+        end
+end)
 
-------------------------BLITZ
-last = 0
-isattacking = false
-windup = 0
-
-Config = MenuConfig("GSO", "GamSterOn Blitzcrank")
-Config:Menu("h", "Hotkeys")
-Config.h:KeyBinding("co", "Combo", 32)
-
+-- O N  T I C K
 OnTick(function (myHero)
-        if isattacking and GetTickCount() > windup + 100 then
-                isattacking = false
-        end
-        if Config.h.co:Value() then
-                local aat = AATarget()
-                if AATarget() ~= nil and GetTickCount() > last then
-                        AttackUnit(aat)
-                elseif not isattacking then
-                        MoveToXYZ(GetMousePos())
-                end
+        if Config.o.co:Value() then
                 if Ready(_Q) then
                         local t = SpellTarget(920, false)
                         if t ~= nil then
-                                local pos = GetPos(myHero, t, 3, 920, 1800, 0.25, 120)
+                                local pos = GetPos(myHero, t, 6, 920, 1800, 0.25, 150)
                                 if pos and pos.x ~= 0 then
                                         CastSkillShot(_Q, pos)
                                 end
                         end
+                elseif Ready(_R) then
+                        local t = SpellTarget(550, false)
+                        if t ~= nil then
+                                CastSpell(_R) 
+                        end
                 end
+                Orb()
                 if Ready(_E) then
                         local t = SpellTarget(350, false)
                         if t ~= nil then
                                 CastSpell(_E) 
                         end
                 end
-                if Ready(_R) then
-                        local t = SpellTarget(600, false)
-                        if t ~= nil then
-                                CastSpell(_R) 
-                        end
+        end
+end)
+
+-- O N  O B J E C T  L O A D
+OnObjectLoad(function(o)
+        if GetObjectType(o) == Obj_AI_Hero then
+                if GetTeam(o) == AllyTeam then
+                        Insert(ObjectManager.Heroes.Allies, o)
+                else
+                        Insert(ObjectManager.Heroes.Enemies, o)
+                end
+        end
+        if GetObjectType(o) == Obj_AI_Turret then
+                if GetTeam(o) == AllyTeam then
+                        table.insert(ObjectManager.Turrets.Allies, o)
+                else
+                        table.insert(ObjectManager.Turrets.Enemies, o)
                 end
         end
 end)
 
-OnSpellCast(function(spell)
-        if spell.spellID == _E then
-                last = 0
+-- O N  C R E A T E  O B J E C T
+OnCreateObj(function(o)
+        local name = GetObjectBaseName(o)
+        if AllyTeam == 100 then
+                if name:find("Minion_T200") then
+                        table.insert(ObjectManager.Minions.Enemies, o)
+                end
+        else
+                if name:find("Minion_T100") then
+                        table.insert(ObjectManager.Minions.Enemies, o)
+                end
         end
 end)
 
-OnProcessSpellComplete(function(unit,spell)
-        if unit.isMe and spell.name:lower():find("attack") then
-                local speed = GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero)
-                last = GetTickCount() + ( 1000 / speed ) - ( 60 / speed )
-                isattacking = false
+-- O N  D E L E T E  O B J E C T
+OnDeleteObj(function(o)
+        local count = #ObjectManager.Minions.Enemies
+        for i = 1, count do
+                local m = ObjectManager.Minions.Enemies[i]
+                local on = GetObjectBaseName(o)
+                local mn = GetObjectBaseName(m)
+                if on == mn then
+                        table.remove(ObjectManager.Minions.Enemies, i)
+                        break
+                end
         end
 end)
 
+-- T A R G E T   S E L E C T O R
 function ComputeTS(unit, AD)
         if AD then return GetCurrentHP(unit) * ( GetArmor(unit) / ( GetArmor(unit) + 100 ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit) end
         return GetCurrentHP(unit) * ( GetMagicResist(unit) / ( GetMagicResist(unit) + 100 ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit)
 end
-
 function AATarget()
     local t1, t2, t3, t4, t5 = nil, nil, nil, nil, nil
     local count, c1, c2, c3, c4, c5 = 0, 0, 0, 0, 0, 0
     local tr1, tr2, tr3, tr4, tr5 = false, false, false, false, false
-    for a, enemy in ipairs(ObjectDataBase.Heroes.Enemies) do
-        if ValidTarget(enemy, GetRange(myHero)+GetHitBox(myHero)+GetHitBox(enemy)) then
+    for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
+        if ValidTarget(enemy, aarange+GetHitBox(myHero)+GetHitBox(enemy)) then
             count = count + 1
             if a == 1 then t1 = enemy tr1 = true c1 = ComputeTS(enemy, true) end
             if a == 2 then if not tr1 then t1 = enemy tr1 = true c1 = ComputeTS(enemy, true) else t2 = enemy tr2 = true c2 = ComputeTS(enemy, true) end end
@@ -190,12 +208,11 @@ function AATarget()
     if count == 5 then if c1 < c2 and c1 < c3 and c1 < c4 and c1 < c5 then return t1 elseif c2  < c1 and c2 < c3 and c2 < c4 and c2 < c5 then return t2 elseif c3  < c1 and c3 < c2 and c3 < c4 and c3 < c5 then return t3 elseif c4  < c1 and c4 < c2 and c4 < c3 and c4 < c5 then return t4 else return t5 end end
     return nil
 end
-
 function SpellTarget(Range, AD)
     local t1, t2, t3, t4, t5 = nil, nil, nil, nil, nil
     local count, c1, c2, c3, c4, c5 = 0, 0, 0, 0, 0, 0
     local tr1, tr2, tr3, tr4, tr5 = false, false, false, false, false
-    for a, enemy in ipairs(ObjectDataBase.Heroes.Enemies) do
+    for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
         if ValidTarget(enemy, Range) then
             count = count + 1
             if AD then
@@ -220,91 +237,59 @@ function SpellTarget(Range, AD)
     if count == 5 then if c1 < c2 and c1 < c3 and c1 < c4 and c1 < c5 then return t1 elseif c2  < c1 and c2 < c3 and c2 < c4 and c2 < c5 then return t2 elseif c3  < c1 and c3 < c2 and c3 < c4 and c3 < c5 then return t3 elseif c4  < c1 and c4 < c2 and c4 < c3 and c4 < c5 then return t4 else return t5 end end
     return nil
 end
-------------------------
 
-OnProcessSpellAttack(function(unit, aa)
-        local id = GetNetworkID(unit)
-        if UtilsDataBase[id] then
-                UtilsDataBase[id].AACastDelay = aa.windUpTime
-                UtilsDataBase[id].AALast = GetTickCount()
-                UtilsDataBase[id].IsAttacking = true
-        end
-        if unit.isMe then
-                isattacking = true
-                windup = GetTickCount() + aa.windUpTime * 1000
-        end
-end)
+-- D I S T A N C E
+function ComputeDistance(a, b)
+        return math.sqrt( a^2 + b^2 )
+end
 
-OnProcessWaypoint(function(unit,waypoint)
-        local id = GetNetworkID(unit)
-        local ms = GetMoveSpeed(unit)
-        if WaypointDataBase[id] then
-                if waypoint.index == 2 then
-                        WaypointDataBase[id].third = WaypointDataBase[id].second
-                        WaypointDataBase[id].second = WaypointDataBase[id].last
-                        WaypointDataBase[id].last.from = waypoint.position
-                        WaypointDataBase[id].last.time = GetTickCount()
-                end
-                if waypoint.index == 1 then
-                        if GetTickCount() < WaypointDataBase[id].last.time + 25 then
-                                UtilsDataBase[id].CanMove = true
-                                local t = waypoint.position
-                                WaypointDataBase[id].last.to = t
-                                local f = WaypointDataBase[id].last.from
-                                local a = t.x - f.x
-                                local b = t.z - f.z
-                                local c = ComputeDistance(a, b)
-                                WaypointDataBase[id].last.dist = c
-                                WaypointDataBase[id].last.dir = { x = a/c, z = b/c }
-                                UtilsDataBase[id].IsMoving = true
-                        else
-                                UtilsDataBase[id].CanMove = false
-                                UtilsDataBase[id].LastStopMoveTime = GetTickCount()
-                                UtilsDataBase[id].IsMoving = false
-                        end
-                end
-        end
-end)
-
+-- D I R E C T I O N
 function ComputeDirection(a, b)
         local c = ComputeDistance(a, b)
         return { x = a/c, z = b/c }
 end
 
-function ComputeDistance(a, b)
-        return math.sqrt( a^2 + b^2 )
-end
 
-OnUpdateBuff(function(unit, buff)
-        local id = GetNetworkID(unit)
-        if WaypointDataBase[id] and ImmobileBuffs[buff.Type] then
-                table.insert(UtilsDataBase[id].Immobile, { StartTime = GetTickCount(), EndTime = buff.ExpireTime } )
-                UtilsDataBase[id].IsImmobile = true
-        end
-end)
-
-OnRemoveBuff(function(unit, buff)
-        local id = GetNetworkID(unit)
-        if UtilsDataBase[id] then
-                for i, b in ipairs(UtilsDataBase[id].Immobile) do
-                        if b.EndTime == buff.ExpireTime then
-                                table.remove(UtilsDataBase[id].Immobile, i)
-                                break
+-- O R B W A L K E R
+function Orb()
+        local aat = AATarget()
+        if aat ~= nil then
+                if GetTickCount() > attack_animation then
+                        AttackUnit(aat)
+                end
+                if GetTickCount() > attack_windup then
+                        local pos = MovePred(aat)
+                        if pos and GetTickCount() > move_issue then
+                                MoveToXYZ(pos)
                         end
                 end
+        elseif GetTickCount() > attack_windup + 75 and GetTickCount() > move_issue then
+                MoveToXYZ(GetMousePos())
         end
-end)
+end
+function MovePred(unit)
+        local unit_x = unit.pos.x
+        local unit_z = unit.pos.z
+        local mouse_x = GetMousePos().x
+        local mouse_z = GetMousePos().z
+        local dir = ComputeDirection(mouse_x-unit_x,mouse_z-unit_z)
+        local go_to_pos_x = unit_x + ( dir.x * ( aarange + 100 ) )
+        local go_to_pos_z = unit_z + ( dir.z * ( aarange + 100 ) )
+        local dist = ComputeDistance(go_to_pos_x-myHero.pos.x, go_to_pos_z-myHero.pos.z)
+        return { x = go_to_pos_x, y = 0, z = go_to_pos_z }
+end
 
+-- P R E D I C T I O N
 function GetPos(startpos, endpos, hitchance, range, speed, delay, width)
         local id = GetNetworkID(endpos)
-        local way = WaypointDataBase[id]
-        local util = UtilsDataBase[id]
-        if WaypointDataBase[id] and WaypointDataBase[id].third.to then
+        local way = WaypointManager[id]
+        local util = UtilsManager[id]
+        if WaypointManager[id] and WaypointManager[id].third.to then
                 local ax = startpos.pos.x
                 local az = startpos.pos.z
                 local bx = endpos.pos.x
                 local bz = endpos.pos.z
-                for m, minion in ipairs(ObjectDataBase.Minions.Enemies) do
+                for m, minion in ipairs(ObjectManager.Minions.Enemies) do
                         local hp = GetCurrentHP(minion)
                         if hp ~= 0 then
                                 local cx = minion.pos.x
@@ -328,23 +313,23 @@ function GetPos(startpos, endpos, hitchance, range, speed, delay, width)
                                 end
                         end
                 end
-                local cx = WaypointDataBase[id].last.to.x
-                local cz = WaypointDataBase[id].last.to.z
-                local bc = WaypointDataBase[id].last.dist
-                local vx = WaypointDataBase[id].last.dir.x
-                local vz = WaypointDataBase[id].last.dir.z
+                local cx = WaypointManager[id].last.to.x
+                local cz = WaypointManager[id].last.to.z
+                local bc = WaypointManager[id].last.dist
+                local vx = WaypointManager[id].last.dir.x
+                local vz = WaypointManager[id].last.dir.z
                 local bv = GetMoveSpeed(endpos)
-                local array = #UtilsDataBase[id].Immobile
-                if UtilsDataBase[id].IsImmobile then
-                        local array = #UtilsDataBase[id].Immobile
+                local array = #UtilsManager[id].Immobile
+                if UtilsManager[id].IsImmobile then
+                        local array = #UtilsManager[id].Immobile
                         if array ~= 0 then
-                                local max = UtilsDataBase[id].Immobile[array].EndTime
-                                local tick = UtilsDataBase[id].Immobile[array].StartTime
+                                local max = UtilsManager[id].Immobile[array].EndTime
+                                local tick = UtilsManager[id].Immobile[array].StartTime
                                 if array > 1 then
                                         for i = array-1, 1, - 1 do
-                                                if UtilsDataBase[id].Immobile[i].EndTime>max then
-                                                        max = UtilsDataBase[id].Immobile[i].EndTime
-                                                        tick = UtilsDataBase[id].Immobile[i].StartTime
+                                                if UtilsManager[id].Immobile[i].EndTime>max then
+                                                        max = UtilsManager[id].Immobile[i].EndTime
+                                                        tick = UtilsManager[id].Immobile[i].StartTime
                                                 end
                                         end
                                 end
@@ -352,34 +337,34 @@ function GetPos(startpos, endpos, hitchance, range, speed, delay, width)
                                         if GetTickCount() < tick + max - max/10*hitchance then
                                                 local dist = ComputeDistance(myHero.pos.x - bx, myHero.pos.z - bz)
                                                 if dist < range then
-                                                        WaypointDataBase[id].last.timeto = dist / bv * 1000
+                                                        WaypointManager[id].last.timeto = dist / bv * 1000
                                                         return endpos.pos
                                                 end
                                         else
-                                                UtilsDataBase[id].IsImmobile = false
+                                                UtilsManager[id].IsImmobile = false
                                         end
                                 end
                         else
-                                UtilsDataBase[id].IsImmobile = false
+                                UtilsManager[id].IsImmobile = false
                         end
                 end
-                if UtilsDataBase[id].IsAttacking then
-                        local lastaa = UtilsDataBase[id].AALast
-                        local windup = UtilsDataBase[id].AACastDelay
+                if UtilsManager[id].IsAttacking then
+                        local lastaa = UtilsManager[id].AALast
+                        local windup = UtilsManager[id].AACastDelay
                         local dist = ComputeDistance(myHero.pos.x - bx, myHero.pos.z - bz)
                         if GetTickCount() < lastaa + windup - windup/10*hitchance then
-                                WaypointDataBase[id].last.timeto = dist / bv * 1000
                                 if dist < range then
+                                        WaypointManager[id].last.timeto = dist / bv * 1000
                                         return endpos.pos
                                 end
                         else
-                                UtilsDataBase[id].IsAttacking = false
+                                UtilsManager[id].IsAttacking = false
                         end
                 end
-                if UtilsDataBase[id].IsMoving and UtilsDataBase[id].CanMove then
+                if UtilsManager[id].IsMoving and UtilsManager[id].CanMove then
                         if bx == cx and bz == cz then
-                                UtilsDataBase[id].LastStopMoveTime = GetTickCount()
-                                UtilsDataBase[id].IsMoving = false
+                                UtilsManager[id].LastStopMoveTime = GetTickCount()
+                                UtilsManager[id].IsMoving = false
                         end
                         local ab = ComputeDistance(ax - bx, az - bz)
                         local hx = bx + ( vx * bv * ( delay + ab / speed ) )
@@ -398,17 +383,17 @@ function GetPos(startpos, endpos, hitchance, range, speed, delay, width)
                                 local px = jx - ( vx * ( width/2 ) )
                                 local pz = jz - ( vz * ( width/2 ) )
                                 local bp = ComputeDistance(bx - px, bz - pz)
-                                if GetTickCount() < WaypointDataBase[id].last.time + 250/hitchance or GetTickCount() > WaypointDataBase[id].last.time + 2000 then
+                                if GetTickCount() < WaypointManager[id].last.time + 250/hitchance or GetTickCount() > WaypointManager[id].last.time + 1000 then
                                         if bp > bc then
                                                 local dist = ComputeDistance(myHero.pos.x - cx, myHero.pos.z - cz)
                                                 if dist< range then
-                                                        WaypointDataBase[id].last.timeto = dist / bv * 1000
+                                                        WaypointManager[id].last.timeto = dist / bv * 1000
                                                         return way.last.to
                                                 end
                                         else
                                                 local dist = ComputeDistance(myHero.pos.x - px, myHero.pos.z - pz) 
                                                 if dist < range then
-                                                        WaypointDataBase[id].last.timeto = dist / bv * 1000
+                                                        WaypointManager[id].last.timeto = dist / bv * 1000
                                                         return { x = px, y = 0, z = pz }
                                                 end
                                         end
@@ -417,11 +402,41 @@ function GetPos(startpos, endpos, hitchance, range, speed, delay, width)
                 else
                         local dist = ComputeDistance(myHero.pos.x - bx, myHero.pos.z - bz)
                         if dist < range then
-                                WaypointDataBase[id].last.timeto = dist / bv * 1000
-                                if GetTickCount() < UtilsDataBase[id].LastStopMoveTime + 250/hitchance then
+                                if GetTickCount() < UtilsManager[id].LastStopMoveTime + 250/hitchance then
+                                        WaypointManager[id].last.timeto = dist / bv * 1000
                                         return endpos.pos
                                 end
                         end
                 end
         end
+end
+
+-- I N S E R T  T A B L E
+function Insert(t, o)
+        table.insert(t, o)
+        WaypointManager[GetNetworkID(o)] =
+        {
+                last =
+                {
+                        dir = {},
+                        time = 0,
+                        from = {},
+                        to = {},
+                        dist = 0,
+                        timeto = 0
+                },
+                second = {},
+                third = {}
+        }
+        UtilsManager[GetNetworkID(o)] =
+        {
+                CanMove = true,
+                IsMoving = false,
+                LastStopMoveTime = 0,
+                IsAttacking = false,
+                AALast = 0,
+                AACastDelay = 0,
+                IsImmobile = false,
+                Immobile = {}
+        }
 end
