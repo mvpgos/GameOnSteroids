@@ -257,11 +257,6 @@ end
 function ComputeDistance(a, b)
         return math.sqrt( a^2 + b^2 )
 end
-function GetDist(a)
-        local x = myHero.pos.x - a.pos.x
-        local z = myHero.pos.z - a.pos.z
-        return math.sqrt( x^2 + z^2 )
-end
 
 -- D I R E C T I O N
 function ComputeDirection(a, b)
