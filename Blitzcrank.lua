@@ -94,7 +94,6 @@ OnDeleteObj(function(o)
 end)
 
 -- O N  L O A D
-local focus_list = {}
 OnLoad(function()
         for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
                 local name = GetObjectName(enemy)
