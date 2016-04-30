@@ -322,7 +322,7 @@ function SelectTarget(range, aa, ad)
                 if aa then
                         dist = dist + GetHitBox(enemy)
                 end
-                local name = GetObjectName(unit)
+                local name = GetObjectName(enemy)
                 if Config.ts.fl[name]:Value() and ValidTarget(enemy, dist) then
                         count = count + 1
                         if a == 1 then
