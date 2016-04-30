@@ -2,11 +2,11 @@
 local ver = "1.4"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
-        PrintChat("New version found! " .. data)
+        PrintChat("GamSterOn new version found! " .. data)
         PrintChat("Downloading update, please wait...")
         DownloadFileAsync("https://raw.githubusercontent.com/gamsteron/GameOnSteroids/master/Blitzcrank.lua", SCRIPT_PATH .. "Blitzcrank.lua", function() PrintChat("Update Complete, please 2x F6!") return end)
     else
-        PrintChat("No updates found!")
+        PrintChat(string.format("<font color='#b756c5'>GamSterOn updated ! Version: %s</font>",ver))
     end
 end
 GetWebResultAsync("https://raw.githubusercontent.com/gamsteron/GameOnSteroids/master/Blitzcrank.version", AutoUpdate)
