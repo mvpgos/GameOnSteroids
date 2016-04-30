@@ -257,12 +257,6 @@ end)
 
 -- O N  T I C K
 OnTick(function (myHero)
-        for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
-                local name = GetObjectName(enemy)
-                if Config.ts.fl[name]:Value() then
-                        PrintChat(name)
-                end
-        end
         if Config.orbwalker.hk.c:Value() then
                 if CanUseSpell and Ready(_Q) then
                         local t = SelectTarget(920, false, false)
