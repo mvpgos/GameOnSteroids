@@ -303,11 +303,11 @@ function SelectTarget(range, aa, ad)
                         if Config.ts.mts.mtr.a:Value() then
                                 if dist2 < Config.ts.mts.mtr.r:Value() and dist2 > dist then
                                         return nil
-                                elseif dist2 < dist then
+                                elseif ValidTarget(focus_target, dist) then
                                         return focus_target
                                 end
                         else
-                                if dist2 < dist then
+                                if ValidTarget(focus_target, dist) then
                                         return focus_target
                                 else
                                         return nil
