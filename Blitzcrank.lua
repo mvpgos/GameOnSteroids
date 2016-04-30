@@ -153,7 +153,7 @@ end)
 -- O N  P R O C E S S  S P E L L  A T T A C K
 OnProcessSpellAttack(function(unit, aa)
         if unit == myHero then
-                local name =  spell.name:lower()
+                local name =  aa.name:lower()
                 if name:find("attack") then
                         local attack_spell = GetTickCount()
                         attack_windup = attack_spell + aa.windUpTime
