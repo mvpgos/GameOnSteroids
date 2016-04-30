@@ -217,17 +217,20 @@ OnWndMsg(function(msg, key)
                         local count = 0
                         local e = nil
                         for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
-                                local dist1 = ComputeDistance(enemy.pos.x - GetMousePos().x, enemy.pos.z - GetMousePos().z)
-                                if dist1 < 150 then
-                                        if Config.ts.mts.msr.a:Value() then
-                                                local dist2 = ComputeDistance(enemy.pos.x - myHero.pos.x, enemy.pos.z - myHero.pos.z)
-                                                if dist2 < Config.ts.mts.msr.r:Value() then
+                                local hp = GetCurrentHP(enemy)
+                                if hp ~= 0 then
+                                        local dist1 = ComputeDistance(enemy.pos.x - GetMousePos().x, enemy.pos.z - GetMousePos().z)
+                                        if dist1 < 150 then
+                                                if Config.ts.mts.msr.a:Value() then
+                                                        local dist2 = ComputeDistance(enemy.pos.x - myHero.pos.x, enemy.pos.z - myHero.pos.z)
+                                                        if dist2 < Config.ts.mts.msr.r:Value() then
+                                                                count = count + 1
+                                                                e = enemy
+                                                        end
+                                                else
                                                         count = count + 1
                                                         e = enemy
                                                 end
-                                        else
-                                                count = count + 1
-                                                e = enemy
                                         end
                                 end
                         end
