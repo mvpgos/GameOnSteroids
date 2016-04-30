@@ -296,6 +296,10 @@ function SelectTarget(range, aa, ad)
         end
         if Config.ts.mts.a:Value() then
                 if focus_target ~= nil then
+                        local hp = GetCurrentHP(focus_target)
+                        if hp == 0 then
+                                focus_target = nil
+                        end
                         if aa then
                                 dist = dist + GetHitBox(focus_target)
                         end
