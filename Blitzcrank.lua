@@ -1,5 +1,5 @@
 -- U P D A T E
-local ver = "1.4"
+local ver = "1.5"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat(string.format("<font color='#b756c5'>GamSterOn</font>").." new version found! " .. data)
@@ -18,8 +18,6 @@ local WaypointManager = {}
 local ObjectManager={Minions={Enemies ={},Allies = {},Jungle = {}},Heroes={Enemies={},Allies={}},Turrets={Enemies={},Allies={}}}
 local AllyTeam = GetTeam(myHero)
 local attack_animation, move_issue, attack_windup, attack_issue = 0, 0, 0, 0
-local last_q, last_r = 0, 0
-local CanOrb = true, true
 local focus_target = nil
 
 -- M E N U
@@ -164,19 +162,6 @@ OnProcessSpellAttack(function(unit, aa)
                 UtilsManager[id].AACastDelay = aa.windUpTime
                 UtilsManager[id].AALast = GetTickCount()
                 UtilsManager[id].IsAttacking = true
-        end
-end)
-
--- O N  S P E L L  C A S T
-OnSpellCast(function(spell)
-        local i = spell.spellID        
-        if i == _Q and GetTickCount() > last_q + 2000 then
-                CanOrb = false
-                last_q = GetTickCount()
-        end
-        if i == _R and GetTickCount() > last_r + 2000 then
-                CanOrb = false
-                last_r = GetTickCount()
         end
 end)
 
@@ -524,17 +509,10 @@ end
 
 -- O R B W A L K E R
 function Orb()
-        local speed = GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero)
         local aat = SelectTarget(0, true, true)
         if aat ~= nil then
-                local dist = ComputeDistance(aat.pos.x - myHero.pos.x, aat.pos.z - myHero.pos.z)
-                local time = ( 0.25 + ( dist / 1800 ) ) * 1000 + 100
                 if GetTickCount() > attack_animation then
-                        if CanOrb then
-                                AttackUnit(aat)
-                        elseif GetTickCount() > last_q + time and GetTickCount() > last_r + 350 then
-                                CanOrb = true
-                        end
+                        AttackUnit(aat)
                 end
                 if GetTickCount() > attack_windup then
                         local pos = MovePred(aat)
