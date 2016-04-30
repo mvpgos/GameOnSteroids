@@ -731,5 +731,3 @@ function Insert(t, o)
                 Immobile = {}
         }
 end
-
-PrintChat("Blitzgrab "..ver.." Loaded")
