@@ -17,7 +17,7 @@ local ImmobileBuffs  = {}
 local WaypointManager = {}
 local ObjectManager={Minions={Enemies ={},Allies = {},Jungle = {}},Heroes={Enemies={},Allies={}},Turrets={Enemies={},Allies={}}}
 local AllyTeam = GetTeam(myHero)
-local attack_animation, attack_windup, move_issue = 0, 0, 0
+local attack_animation, move_issue, attack_windup, attack_issue = 0, 0, 0, 0
 local focus_target = nil
 
 -- M E N U
@@ -153,12 +153,9 @@ end)
 -- O N  P R O C E S S  S P E L L  A T T A C K
 OnProcessSpellAttack(function(unit, aa)
         if unit == myHero then
-                local name =  aa.name:lower()
-                if name:find("attack") then
-                        local attack_spell = GetTickCount()
-                        attack_windup = attack_spell + aa.windUpTime
-                        attack_animation = attack_spell + aa.animationTime
-                end
+                local attack_spell = GetTickCount()
+                attack_windup = attack_windup + ( attack_spell - attack_issue )
+                attack_animation = attack_animation + ( attack_spell - attack_issue )
         end
         local id = GetNetworkID(unit)
         if UtilsManager[id] then
@@ -202,6 +199,12 @@ end)
 
 -- O N  I S S U E  O R D E R
 OnIssueOrder(function(order)
+        if order.flag == 3 then
+                attack_issue = GetTickCount()
+                local speed = GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero)
+                attack_windup = attack_issue + ( 270 / speed )
+                attack_animation = attack_issue + ( 1000 / speed )
+        end
         if order.flag == 2 then
                 move_issue = GetTickCount() + 175
         end
@@ -494,7 +497,7 @@ function SelectTarget(range, aa, ad)
         return nil
 end
 
--- D I S T A N C E
+-- D I S T A N C E-
 function ComputeDistance(a, b)
         return math.sqrt( a^2 + b^2 )
 end
