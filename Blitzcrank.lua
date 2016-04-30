@@ -19,7 +19,7 @@ local ObjectManager={Minions={Enemies ={},Allies = {},Jungle = {}},Heroes={Enemi
 local AllyTeam = GetTeam(myHero)
 local attack_animation, move_issue, attack_windup, attack_issue = 0, 0, 0, 0
 local last_q, last_r = 0, 0
-local CanUseSpell, CanOrb = true, true
+local CanOrb = true, true
 local focus_target = nil
 
 -- M E N U
@@ -258,7 +258,7 @@ end)
 -- O N  T I C K
 OnTick(function (myHero)
         if Config.orbwalker.hk.c:Value() then
-                if CanUseSpell and Ready(_Q) then
+                if Ready(_Q) then
                         local t = SelectTarget(920, false, false)
                         if t ~= nil then
                                 local pos = GetPos(myHero, t, 920, 1800, 0.25, 120)
@@ -266,7 +266,7 @@ OnTick(function (myHero)
                                         CastSkillShot(_Q, pos)
                                 end
                         end
-                elseif CanUseSpell and Ready(_R) then
+                elseif Ready(_R) then
                         local t = SelectTarget(550, false, false)
                         if t ~= nil then
                                 CastSpell(_R) 
@@ -275,7 +275,7 @@ OnTick(function (myHero)
                 if Config.orbwalker.a:Value() then
                         Orb()
                 end
-                if CanUseSpell and Ready(_E) then
+                if Ready(_E) then
                         local t = SelectTarget(300, false, false)
                         if t ~= nil then
                                 CastSpell(_E) 
@@ -530,7 +530,6 @@ function Orb()
                 local dist = ComputeDistance(aat.pos.x - myHero.pos.x, aat.pos.z - myHero.pos.z)
                 local time = ( 0.25 + ( dist / 1800 ) ) * 1000 + 100
                 if GetTickCount() > attack_animation then
-                        CanUseSpell = false
                         if CanOrb then
                                 AttackUnit(aat)
                         elseif GetTickCount() > last_q + time and GetTickCount() > last_r + 350 then
@@ -538,7 +537,6 @@ function Orb()
                         end
                 end
                 if GetTickCount() > attack_windup then
-                        CanUseSpell = true
                         local pos = MovePred(aat)
                         if pos then
                                 if GetTickCount() > move_issue then
@@ -547,7 +545,6 @@ function Orb()
                         end
                 end
         elseif GetTickCount() > attack_windup + 75 then
-                CanUseSpell = true
                 if GetTickCount() > move_issue then
                         MoveToXYZ(GetMousePos())
                 end
