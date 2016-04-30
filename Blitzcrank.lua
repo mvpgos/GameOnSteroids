@@ -1,6 +1,5 @@
 -- U P D A T E
 local ver = "1.2"
-
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -10,7 +9,6 @@ function AutoUpdate(data)
         PrintChat("No updates found!")
     end
 end
-
 GetWebResultAsync("https://raw.githubusercontent.com/gamsteron/GameOnSteroids/master/Blitzcrank.version", AutoUpdate)
 
 -- V A R I A B L E S
