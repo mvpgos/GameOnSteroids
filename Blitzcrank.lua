@@ -1,5 +1,5 @@
 -- U P D A T E
-local ver = "1.3"
+local ver = "1.4"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -94,10 +94,11 @@ OnDeleteObj(function(o)
 end)
 
 -- O N  L O A D
+local focus_list = {}
 OnLoad(function()
         for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
                 local name = GetObjectName(enemy)
-                Config.ts.fl:Boolean("focus"..a, name, true)
+                Config.ts.fl:Boolean(name, name, true)
         end
         ImmobileBuffs = { [GetBuffTypeList().Stun] = true, [GetBuffTypeList().Taunt] = true, [GetBuffTypeList().Snare] = true, [GetBuffTypeList().Fear] = true, [GetBuffTypeList().Charm] = true, [GetBuffTypeList().Suppression] = true, [GetBuffTypeList().Flee] = true, [GetBuffTypeList().Knockup] = true, [GetBuffTypeList().Knockback] = true }
 end)
@@ -257,6 +258,12 @@ end)
 
 -- O N  T I C K
 OnTick(function (myHero)
+        for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
+                local name = GetObjectName(enemy)
+                if Config.ts.fl[name]:Value() then
+                        PrintChat(name)
+                end
+        end
         if Config.orbwalker.hk.c:Value() then
                 if CanUseSpell and Ready(_Q) then
                         local t = SelectTarget(920, false, false)
@@ -322,9 +329,10 @@ function SelectTarget(range, aa, ad)
                 if aa then
                         dist = dist + GetHitBox(enemy)
                 end
-                if ValidTarget(enemy, dist) then
+                local name = GetObjectName(unit)
+                if Config.ts.fl[name]:Value() and ValidTarget(enemy, dist) then
                         count = count + 1
-                        if a == 1 and Config.ts.fl.focus1:Value() then
+                        if a == 1 then
                                 t1 = enemy
                                 tr1 = true
                                 if ad then
@@ -333,7 +341,7 @@ function SelectTarget(range, aa, ad)
                                         c1 = ComputeTS(enemy, false)
                                 end
                         end
-                        if a == 2 and Config.ts.fl.focus2:Value() then
+                        if a == 2 then
                                 if not tr1 then
                                         t1 = enemy
                                         tr1 = true
@@ -352,7 +360,7 @@ function SelectTarget(range, aa, ad)
                                         end
                                 end
                         end
-                        if a == 3 and Config.ts.fl.focus3:Value() then
+                        if a == 3 then
                                 if not tr1 then
                                         t1 = enemy
                                         tr1 = true
@@ -379,7 +387,7 @@ function SelectTarget(range, aa, ad)
                                         end
                                 end
                         end
-                        if a == 4 and Config.ts.fl.focus4:Value() then
+                        if a == 4 then
                                 if not tr1 then
                                         t1 = enemy
                                         tr1 = true
@@ -414,7 +422,7 @@ function SelectTarget(range, aa, ad)
                                         end
                                 end
                         end
-                        if a == 5 and Config.ts.fl.focus5:Value() then
+                        if a == 5 then
                                 if not tr1 then
                                         t1 = enemy
                                         tr1 = true
