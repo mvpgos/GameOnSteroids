@@ -245,6 +245,9 @@ end)
 
 -- O N  T I C K
 OnTick(function (myHero)
+        if focus_target ~= nil and GetCurrentHP(focus_target) == 0 then
+            focus_target = nil
+        end
         if Config.orbwalker.hk.c:Value() then
                 if Ready(_Q) then
                         local t = SelectTarget(920, false, false)
@@ -300,10 +303,6 @@ function SelectTarget(range, aa, ad)
                                 else
                                         return nil
                                 end
-                        end
-                        local hp = GetCurrentHP(focus_target)
-                        if hp == 0 then
-                                focus_target = nil
                         end
                 end
         end
