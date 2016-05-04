@@ -1,5 +1,9 @@
+if myHero.charName ~= "Blitzcrank" then
+  return 
+end
+
 -- U P D A T E
-local ver = "1.5"
+local ver = "1.6"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
