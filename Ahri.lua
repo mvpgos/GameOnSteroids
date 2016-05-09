@@ -2,7 +2,6 @@ if myHero.charName ~= "Ahri" then
   return 
 end
 
--- U P D A T E
 local ver = "1.0"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
