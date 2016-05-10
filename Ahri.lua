@@ -34,7 +34,7 @@ OnIssueOrder(function(order)
                 aa_anim = t+( 1000 / s )
         end
         if order.flag == 2 then
-                move_next = GetTickCount() + 175
+                move_next = GetTickCount()
         end
 end)
 
