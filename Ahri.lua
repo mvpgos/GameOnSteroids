@@ -222,7 +222,7 @@ function Collision(a, b, c, h)
         local a_angle = math.acos((n1*n1 + n2*n2 - n3*n3) / (2 * n1 * n2))
         local b_angle = math.acos((n1*n1 + n3*n3 - n2*n2) / (2 * n1 * n3))
         if a_angle < math.pi / 2 and b_angle < 1.75 then
-                local x = math.sin(a_angle) * math.sqrt(n2)
+                local x = math.sin(a_angle) * n2
                 if x < h then
                         return true
                 else
