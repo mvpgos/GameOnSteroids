@@ -117,7 +117,7 @@ OnRemoveBuff(function(unit, buff)
 end)
 
 function Orb()
-        if GetTickCount() > aa_wind + GetLatency() then
+        if GetTickCount() > aa_wind + GetLatency() and GetTickCount() > move_next + 175 then
                 MoveToXYZ(GetMousePos())
         end
         local aat = GetTarget(myHero.range + myHero.boundingRadius, true)
