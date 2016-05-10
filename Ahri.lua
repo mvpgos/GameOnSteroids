@@ -161,7 +161,7 @@ function ELOGIC()
                 local et = GetTarget(975, false)
                 if et ~= nil then
                         local etpos = et.pos
-                        local i = InterceptionPoint(et,1500,60,0.25,950)
+                        local i = InterceptionPoint(et,1600,60,0.25,950)
                         if i ~= nil and NoCollision(et, myHero.pos, etpos, 100, 975) and math.sqrt((i.x-etpos.x)*(i.x-etpos.x)+(i.z-etpos.z)* (i.z-etpos.z)) < 300 then
                                 CastSkillShot(_E, i)
                         end
