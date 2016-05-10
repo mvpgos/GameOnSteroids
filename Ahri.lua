@@ -2,7 +2,7 @@ if myHero.charName ~= "Ahri" then
   return 
 end
 
-local ver = "1.2"
+local ver = "1.21"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
