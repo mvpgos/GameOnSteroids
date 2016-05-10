@@ -299,7 +299,7 @@ function InterceptionPoint(t,s,w,d,r)
                 local dist = math.sqrt((mepos.x - B.x)*(mepos.x - B.x)+(mepos.z - B.z)*(mepos.z - B.z))
                 if GetTickCount() < WaypointManager[id].time + 100 or GetTickCount() > WaypointManager[id].time + 1000 then
                         if dist < r then
-                        	if dist > 150 then
+                        	if dist > 100 then
                                 	return { x = B.x + (dirx * ( ( GetMoveSpeed(t) * d ) - ( w / 2) ) ), z = B.z + (dirz * ( ( GetMoveSpeed(t) * d ) - ( w / 2) ) ) }
                         	end
                         end
