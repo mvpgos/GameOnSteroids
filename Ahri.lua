@@ -1,5 +1,3 @@
--- GITHUB REFRESH
---
 if myHero.charName ~= "Ahri" then
   return 
 end
