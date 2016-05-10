@@ -131,9 +131,9 @@ end
 function QLOGIC()
         if Ready(_Q) then
                 local qt = GetTarget(975, false)
-                local qtpos = et.pos
                 if qt ~= nil then
-                        local i = InterceptionPoint(qt,1500,0,0.25,880)
+                        local qtpos = qt.pos
+                        local i = InterceptionPoint(qt,1700,50,0.25,850)
                         if i ~= nil and math.sqrt((i.x-qtpos.x)*(i.x-qtpos.x)+(i.z-qtpos.z)* (i.z-qtpos.z)) < 300  then
                                 CastSkillShot(_Q, i)
                         else
@@ -159,9 +159,9 @@ end
 function ELOGIC()
         if Ready(_E) then
                 local et = GetTarget(975, false)
-                local etpos = et.pos
                 if et ~= nil then
-                        local i = InterceptionPoint(et,1500,60,0.25,975)
+                        local etpos = et.pos
+                        local i = InterceptionPoint(et,1500,60,0.25,950)
                         if i ~= nil and NoCollision(et, myHero.pos, etpos, 100, 975) and math.sqrt((i.x-etpos.x)*(i.x-etpos.x)+(i.z-etpos.z)* (i.z-etpos.z)) < 300 then
                                 CastSkillShot(_E, i)
                         end
@@ -240,7 +240,7 @@ OnWndMsg(function(msg, key)
                         if ValidTarget(enemy, 2500) then
                         	local mp = GetMousePos()
                         	local ep = enemy.pos
-                                local dist = math.sqrt((ep.x - mp).x)*(ep.x - mp.x)+(ep.z- mp.z)*(ep.z - mp.z))
+                                local dist = math.sqrt((ep.x - mp.x)*(ep.x - mp.x)+(ep.z- mp.z)*(ep.z - mp.z))
                                 if dist < 150 then
                                         obj = enemy
                                         break
@@ -304,7 +304,7 @@ function InterceptionPoint(t,s,w,d,r)
                 end
         else
                 if distmt < r then
-                        if GetTickCount() < UtilsManager[id].LastStopMoveTime + 100 or dist < 300 then
+                        if GetTickCount() < UtilsManager[id].LastStopMoveTime + 100 or distmt < 300 then
                                 return tpos
                         end
                 end
