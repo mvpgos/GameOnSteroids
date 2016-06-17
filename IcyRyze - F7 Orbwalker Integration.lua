@@ -80,6 +80,8 @@ OnTick (function()
       BlockF7OrbWalk(false)
     end
     Combo()
+  else
+    BlockF7OrbWalk(false)
   end
   KillSteal()
 end)
