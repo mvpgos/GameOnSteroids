@@ -98,9 +98,9 @@ function Combo()
     return 
   end
   if GetDistance(target) <= Q.range then
-    if Charged == false and GetPassiveBuff() <= 2 and not Ready(_R) then
+    if GetPassiveBuff() <= 2 and not Ready(_R) then
       if Ready(_Q) then
-        CastQ(target)
+        CastQn(target)
       end
       if ValidTarget(target,W.range) and Ready(_W) then
         CastTargetSpell(target, _W)
@@ -109,9 +109,9 @@ function Combo()
         CastTargetSpell(target, _E)
       end
     end
-    if Charged == false and GetPassiveBuff() <= 2 and Ready(_R) then 
+    if GetPassiveBuff() <= 2 and Ready(_R) then 
       if Ready(_Q) then
-        CastQ(target)
+        CastQn(target)
       end
       if GetDistance(target) <= E.range and Ready(_E) then
         CastTargetSpell(target, _E)
