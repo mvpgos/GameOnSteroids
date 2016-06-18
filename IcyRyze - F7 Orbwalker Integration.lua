@@ -70,12 +70,10 @@ function CastQn(unit)
   if unit then
     if GotBuff(unit, "RyzeW") == 1 or GotBuff(unit, "RyzeWR") == 1 then
       CastSkillShot(_Q, unit.pos)
-      PrintChat("W")
       return
     end
     local pI = GetPrediction(unit, Q)
     if pI and pI.hitChance >= 0.25 then
-      PrintChat("hitchance")
       CastSkillShot(_Q, pI.castPos)
     end
   end
