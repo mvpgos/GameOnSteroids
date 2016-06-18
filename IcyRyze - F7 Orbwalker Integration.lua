@@ -15,7 +15,6 @@ local Charged = false
 local Menu = MenuConfig("Ryze", "Icy Ryze")
 Menu:Menu("Combo", "Combo")
 Menu.Combo:KeyBinding("c", "Hotkey", 32)
-Menu.Combo:Boolean("useRww", "Only R if Target Is Rooted", true)
 Menu:Menu("misc", "Misc")
 Menu.misc:Slider("pred", "Q Hit Chance", 3,0,10,1)
 Menu.misc:Info("info", "         0 = Low - 10 = High")
@@ -69,8 +68,16 @@ end
 
 function CastQn(unit)
   if unit then
+    if GotBuff(unit, "RyzeW") == 1 or GotBuff(unit, "RyzeWR") == 1 then
+      CastSkillShot(_Q, unit.pos)
+      PrintChat("W")
+      return
+    end
     local pI = GetPrediction(unit, Q)
-    CastSkillShot(_Q, pI.castPos)
+    if pI and pI.hitChance >= 0.25 then
+      PrintChat("hitchance")
+      CastSkillShot(_Q, pI.castPos)
+    end
   end
 end
 
@@ -88,7 +95,6 @@ function KillSteal()
 end
 
 function Combo()
-  local rwwSpell = Menu.Combo.useRww:Value()
   local target = GetBestTarget(Q.range)
   if not ValidTarget(target,Q.range) then 
     return 
@@ -125,10 +131,8 @@ function Combo()
       end
     end
     if GetPassiveBuff() == 3 and Ready(_R) then
-        if GetDistance(target) <= Q.range and GetCurrentHP(target) > GetDamage(_Q,target) + GetDamage(_E,target) then
-        if not rwwSpell or (rwwSpell and GotBuff(target, "RyzeW"))  then
-          CastSpell(_R)
-        end
+      if GetDistance(target) <= Q.range and GetCurrentHP(target) > GetDamage(_Q,target) + GetDamage(_E,target) then
+        CastSpell(_R)
       end
     end
     if GetPassiveBuff() == 4 and not Ready(_R) then
@@ -144,9 +148,7 @@ function Combo()
     end
     if GetPassiveBuff() == 4 and Ready(_R) then
       if GetDistance(target) <= Q.range and GetCurrentHP(target) > GetDamage(_Q,target) + GetDamage(_E,target) then
-        if not rwwSpell or (rwwSpell and GotBuff(target, "RyzeW"))  then
-          CastSpell(_R)
-        end
+        CastSpell(_R)
       end
     end
     if Charged == true and not Ready(_R) then
@@ -168,9 +170,7 @@ function Combo()
     end
     if Charged == true and Ready(_R) then
       if GetDistance(target) <= Q.range and GetCurrentHP(target) > GetDamage(_Q,target) + GetDamage(_E,target) then
-        if not rwwSpell or (rwwSpell and GotBuff(target, "RyzeW"))  then
-          CastSpell(_R)
-        end
+        CastSpell(_R)
       end
     end
   end
