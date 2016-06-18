@@ -45,7 +45,7 @@ end)
 OnTick (function()
   if Menu.Combo.c:Value() then
     local qTarget = GetBestTarget(750)
-    if qTarget and GetDistance(qTarget) > 440 and GetCurrentHP(qTarget) > 3*getdmg('AD',qTarget,myHero) then
+    if qTarget and (GetDistance(qTarget) > 440 or Ready(_Q) or Ready(_W) or Ready(_E)) and GetCurrentHP(qTarget) > 3*getdmg('AD',qTarget,myHero) then
       BlockF7OrbWalk(true)
       MoveToXYZ(GetMousePos())
     else
