@@ -48,7 +48,7 @@ function HeroCollisitionCheck(pos, enemy)
 end
 
 -- U P D A T E
-local ver = "1.9"
+local ver = "1.91"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -391,7 +391,7 @@ function GetPos(startpos, endpos, range, speed, delay, width)
                                                 local dist_obj_line = math.abs(a * c + b * d) / ab
                                                 local compute_max_obj_dist = width/2 + cbb/2 + 50
                                                 if dist_obj_line < compute_max_obj_dist then
-                                                        PrintChat("GSO "..GetObjectName(minion))
+                                                        -- DEBUG PrintChat("GSO "..GetObjectName(minion))
                                                         return { x = 0 }
                                                 end
                                         end
