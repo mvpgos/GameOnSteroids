@@ -42,7 +42,7 @@ Config:Menu("PRED", "Prediction")
 --Config.PRED:Boolean("DASH", "Auto Q if enemy is dashing", true)
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 1, {"GamSterOn", "Open Predict", "GPrediction"})
 Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,3,10,1)
-Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 4,4,10,1)
+Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 6,6,10,1)
 Config.PRED:Slider("GHITCHANCE", "GPrediction Hitchance", 3, 3,5,1)
 
 -- O N  L O A D
