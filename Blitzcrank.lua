@@ -2,6 +2,8 @@ if myHero.charName ~= "Blitzcrank" then
   return 
 end
 
+BlockF7OrbWalk(true)
+
 require 'OpenPredict'
 if not FileExist(COMMON_PATH.."\\GPrediction.lua") then
         DownloadFileAsync("https://raw.githubusercontent.com/KeVuong/GoS/master/Common/GPrediction.lua", COMMON_PATH .. "GPrediction.lua", function() PrintChat("Download Completed, please 2x F6!") return end)
@@ -13,7 +15,7 @@ local GPred = _G.gPred
 local Q = {range = 925, maxrange = 925, radius = 70 , speed = 1750, delay = 0.25, type = "line"}
 
 -- G P R E D I C T I O N  C O L L I S I O N https://github.com/KeVuong/GoS/blob/master/Support%20Bundle.lua#L639
-function CollisitionCheck(pos)
+function MinionCollisitionCheck(pos)
         --local objects = {}
         local objects = 0
         for _,minion in pairs(minionManager.objects) do
@@ -28,9 +30,25 @@ function CollisitionCheck(pos)
         --return #objects > 0, objects
         return objects > 0
 end
+function HeroCollisitionCheck(pos, enemy)
+        --local objects = {}
+        local objects = 0
+        for _,unit in pairs(GetEnemyHeroes()) do
+                if unit ~= enemy and ValidTarget(unit,1200) then
+                        local pointSegment, pointLine, isOnSegment = VectorPointProjectionOnLineSegment(myHero.pos, pos, Vector(unit))
+                        if isOnSegment and GetDistance(pointSegment,unit) < Q.radius + unit.boundingRadius then
+                                --table.insert(objects,minion)
+                                -- DEBUG PrintChat("G "..GetObjectName(unit))
+                                objects = objects + 1
+                        end
+                end
+        end
+        --return #objects > 0, objects
+        return objects > 0
+end
 
 -- U P D A T E
-local ver = "1.8"
+local ver = "1.9"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -183,7 +201,7 @@ end)
 
 -- O N  W N D  M S G
 OnWndMsg(function(msg, key)
-        if key == 1 then
+        if msg == 513 then
                 local count = 0
                 local target = nil
                 for _,enemy in pairs(GetEnemyHeroes()) do
@@ -219,22 +237,23 @@ OnTick(function (myHero)
                         if qt ~= nil then
                                 local case = Config.PRED.SWITCH:Value()
                                 if case == 1 then
-                                        local pos = GetPos(myHero, qt, 920, 1800, 0.25, 120)
+                                        local pos = GetPos(myHero, qt, 920, 1700, 0.25, 120)
                                         if pos and pos.x ~= 0 then
                                                 CastSkillShot(_Q, pos)
                                         end
                                 elseif case == 2 then
                                         local pI = GetPrediction(qt, Q)
                                         local hitchance = Config.PRED.OHITCHANCE:Value() * 0.1
-                                        if pI and pI.hitChance >= hitchance and not pI:mCollision(1) then
+                                        if pI and pI.hitChance >= hitchance and not pI:mCollision(0) and not pI:hCollision(0) then
                                                 CastSkillShot(_Q, pI.castPos)
                                         end
                                 else
                                         local pI = GPred:GetPrediction(qt,myHero,Q)
                                         local hitchance = Config.PRED.GHITCHANCE:Value()
                                         if pI and pI.HitChance >= hitchance then
-                                              local col,obj = CollisitionCheck(pI.CastPosition)
-                                              if not col then
+                                              local mcol = MinionCollisitionCheck(pI.CastPosition)
+                                              local hcol = HeroCollisitionCheck(pI.CastPosition, qt)
+                                              if not mcol and not hcol then
                                                       CastSkillShot(_Q, pI.CastPosition)
                                               end
                                         end
@@ -263,14 +282,6 @@ end)
 
 -- S E T  A T T A C K  V A L U E
 function SetAttackValue(check)
-        if check == true then
-                -- DEBUG PrintChat("t F7Orbwalker")
-                BlockF7OrbWalk(true)
-                MoveToXYZ(GetMousePos())
-        else
-                -- DEBUG PrintChat("f F7Orbwalker")
-                BlockF7OrbWalk(false)
-        end
         if GoSWalkLoaded then
                 if check == true then
                         -- DEBUG PrintChat("t GosWalk")
@@ -321,7 +332,13 @@ end
 function GetSpellTarget(range)
         local selectedtarget = GetSelectedTarget()
         if selectedtarget ~= nil then
-                return selectedtarget
+                if GetCurrentHP(focus_target) == 0 or ComputeDistance(focus_target.pos.x - myHero.pos.x, focus_target.pos.z - myHero.pos.z) > 3000 then
+                        focus_target = nil
+                end
+                if ValidTarget(focus_target, range) then
+                        return selectedtarget
+                end
+                return nil
         end
         local dmg = 9999
         local target = nil
@@ -340,7 +357,7 @@ end
 -- S E L E C T E D  T A R G E T
 function GetSelectedTarget()
         local target = nil
-        if focus_target ~= nil and ValidTarget(focus_target, 1000) then
+        if focus_target ~= nil then
                 target = focus_target
         end
         return target
@@ -374,6 +391,31 @@ function GetPos(startpos, endpos, range, speed, delay, width)
                                                 local dist_obj_line = math.abs(a * c + b * d) / ab
                                                 local compute_max_obj_dist = width/2 + cbb/2 + 50
                                                 if dist_obj_line < compute_max_obj_dist then
+                                                        PrintChat("GSO "..GetObjectName(minion))
+                                                        return { x = 0 }
+                                                end
+                                        end
+                                end
+                        end
+                end
+                for _,unit in pairs(GetEnemyHeroes()) do
+                        if unit ~= endpos and ValidTarget(unit,1200) then
+                                local cx = unit.pos.x
+                                local cz = unit.pos.z
+                                local cbb = GetHitBox(unit)
+                                local a = bz-az
+                                local b = bx-ax
+                                local c = ax-cx
+                                local d = cz-az
+                                local ab = ComputeDistance(b,a)
+                                local ac = ComputeDistance(c,az-cz)
+                                local bc = ComputeDistance(bx-cx,bz-cz)
+                                if ac < ab + 200 then
+                                        if bc < ab + 200 then
+                                                local dist_obj_line = math.abs(a * c + b * d) / ab
+                                                local compute_max_obj_dist = width/2 + cbb/2 + 50
+                                                if dist_obj_line < compute_max_obj_dist then
+                                                        -- DEBUG PrintChat("GSO "..GetObjectName(unit))
                                                         return { x = 0 }
                                                 end
                                         end
