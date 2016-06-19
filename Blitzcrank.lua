@@ -13,7 +13,7 @@ require "GPrediction"
 local GPred = _G.gPred
 
 -- U P D A T E
-local ver = "1.92"
+local ver = "1.93"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -239,6 +239,7 @@ OnTick(function (myHero)
                 end
         else
                 SetAttackValue(false)
+                AutoQ()
         end
 end)
 
@@ -314,6 +315,27 @@ function GetSpellTarget(range)
                 end
         end
         return target
+end
+
+-- A U T O  Q  H I G H  H I T C H A N C E
+function AutoQ()
+        if Ready(_Q) then
+                local qt = GetSpellTarget(920)
+                if qt ~= nil then
+                        local case = Config.PRED.SWITCH:Value()
+                        if case == 2 then
+                                local pI = GetPrediction(qt, Q)
+                                if pI and pI.hitChance == 0.99 and not pI:mCollision(0) and not pI:hCollision(0) then
+                                        CastSkillShot(_Q, pI.castPos)
+                                end
+                        elseif case == 3 then
+                                local pI = GPred:GetPrediction(qt,myHero,Q, false, true)
+                                if pI and pI.HitChance == 4 then
+                                        CastSkillShot(_Q, pI.CastPosition)
+                                end
+                        end
+                end
+        end
 end
 
 -- S E L E C T E D  T A R G E T
