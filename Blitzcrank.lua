@@ -13,7 +13,7 @@ require "GPrediction"
 local GPred = _G.gPred
 
 -- U P D A T E
-local ver = "1.93"
+local ver = "1.94"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
