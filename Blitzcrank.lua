@@ -42,7 +42,7 @@ Config:Menu("PRED", "Prediction")
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 1, {"GamSterOn", "Open Predict", "GPrediction"})
 Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,1,10,1)
 Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 4,1,10,1)
-Config.PRED:Slider("GHITCHANCE", "GPrediction Hitchance", 3, 1,10,1)
+Config.PRED:Slider("GHITCHANCE", "GPrediction Hitchance", 3, 1,5,1)
 
 -- O N  L O A D
 OnLoad(function()
