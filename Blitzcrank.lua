@@ -39,6 +39,7 @@ Config:Menu("TS", "GamSterOn Target Selector")
 Config.TS:Menu("focus", "Focus List")
 Config.TS:ColorPick("color", "Selected Target Color", {255,255,0,0})
 Config:Menu("PRED", "Prediction")
+Config.PRED:Boolean("DASH", "Auto Q if enemy is dashing trist W etc.", false)
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 1, {"GamSterOn", "Open Predict", "GPrediction"})
 Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,1,10,1)
 Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 4,1,10,1)
@@ -239,7 +240,9 @@ OnTick(function (myHero)
                 end
         else
                 SetAttackValue(false)
-                AutoQ()
+                if Config.PRED.DASH:Value() then
+                        AutoQ()
+                end
         end
 end)
 
