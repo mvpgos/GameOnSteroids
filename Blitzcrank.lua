@@ -3,7 +3,7 @@ if myHero.charName ~= "Blitzcrank" then
 end
 
 -- U P D A T E
-local ver = "1.6"
+local ver = "1.7"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -19,106 +19,67 @@ GetWebResultAsync("https://raw.githubusercontent.com/gamsteron/GameOnSteroids/ma
 local UtilsManager = {}
 local ImmobileBuffs  = {}
 local WaypointManager = {}
-local ObjectManager={Minions={Enemies ={},Allies = {},Jungle = {}},Heroes={Enemies={},Allies={}},Turrets={Enemies={},Allies={}}}
-local AllyTeam = GetTeam(myHero)
-local attack_animation, move_issue, attack_windup, attack_issue = 0, 0, 0, 0
+local aa_last, aa_windup, aa_animation = 0, 0, 0
 local focus_target = nil
 
 -- M E N U
-Config = MenuConfig("GSO", "GamSterOn All in one")
-Config:Menu("orbwalker", "GamSterOn Orbwalker")
-Config.orbwalker:Boolean("a", "active", true)
-Config.orbwalker:Menu("hk", "Hotkeys")
-Config.orbwalker.hk:KeyBinding("c", "Combo", 32)
-Config.orbwalker:Menu("mm", "Melee movement")
-Config.orbwalker.mm:Boolean("a", "active", false)
-Config:Menu("ts", "GamSterOn Target Selector")
-Config.ts:Menu("fl", "Focus List")
-Config.ts:Menu("mts", "Manual target selection")
-Config.ts.mts:Boolean("a", "active", true)
-Config.ts.mts:Menu("msr", "Minimum selection range")
-Config.ts.mts.msr:Boolean("a", "active", true)
-Config.ts.mts.msr:Slider("r", "range", 1500,0,3000,1)
-Config.ts.mts:Menu("mtr", "Minimum target range")
-Config.ts.mts.mtr:Boolean("a", "active", true)
-Config.ts.mts.mtr:Slider("r", "range", 1500,0,3000,1)
-Config:Menu("pred", "GamSterOn Prediction")
-Config.pred:Slider("h", "Hitchance", 3,1,10,1)
-Config:Menu("draw", "Drawings")
-Config.draw:Menu("se", "Selected enemy")
-Config.draw.se:Boolean("a", "active", true)
-Config.draw.se:ColorPick("c", "Color", {255,255,0,0})
-
--- O N  O B J E C T  L O A D
-OnObjectLoad(function(o)
-        if GetObjectType(o) == Obj_AI_Hero then
-                if GetTeam(o) == AllyTeam then
-                        Insert(ObjectManager.Heroes.Allies, o)
-                else
-                        Insert(ObjectManager.Heroes.Enemies, o)
-                end
-        end
-        if GetObjectType(o) == Obj_AI_Turret then
-                if GetTeam(o) == AllyTeam then
-                        table.insert(ObjectManager.Turrets.Allies, o)
-                else
-                        table.insert(ObjectManager.Turrets.Enemies, o)
-                end
-        end
-end)
-
--- O N  C R E A T E  O B J E C T
-OnCreateObj(function(o)
-        local name = GetObjectBaseName(o)
-        if AllyTeam == 100 then
-                if name:find("Minion_T200") then
-                        table.insert(ObjectManager.Minions.Enemies, o)
-                end
-        else
-                if name:find("Minion_T100") then
-                        table.insert(ObjectManager.Minions.Enemies, o)
-                end
-        end
-end)
-
--- O N  D E L E T E  O B J E C T
-OnDeleteObj(function(o)
-        local count = #ObjectManager.Minions.Enemies
-        for i = 1, count do
-                local m = ObjectManager.Minions.Enemies[i]
-                local on = GetObjectBaseName(o)
-                local mn = GetObjectBaseName(m)
-                if on == mn then
-                        table.remove(ObjectManager.Minions.Enemies, i)
-                        break
-                end
-        end
-end)
+Config = MenuConfig("GSO", "GamSterOn Blitzcrank")
+Config:KeyBinding("combo", "Combo", 32)
+Config:Slider("hitchance", "Q Hitchance", 3,1,10,1)
+Config:Menu("TS", "GamSterOn Target Selector")
+Config.TS:Menu("focus", "Focus List")
+Config.TS:ColorPick("color", "Selected Target Color", {255,255,0,0})
 
 -- O N  L O A D
 OnLoad(function()
-        for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
-                local name = GetObjectName(enemy)
-                Config.ts.fl:Boolean(name, name, true)
+        for _,o in pairs(GetEnemyHeroes()) do
+                local name = GetObjectName(o)
+                local id = GetNetworkID(o)
+                Config.TS.focus:Boolean(name, name, true)
+                WaypointManager[id] =
+                {
+                        last =
+                        {
+                                dir = {},
+                                time = 0,
+                                from = {},
+                                to = {},
+                                dist = 0,
+                                timeto = 0
+                        },
+                        second = {},
+                        third = {}
+                }
+                UtilsManager[id] =
+                {
+                        CanMove = true,
+                        IsMoving = false,
+                        LastStopMoveTime = 0,
+                        IsAttacking = false,
+                        AALast = 0,
+                        AACastDelay = 0,
+                        IsImmobile = false,
+                        Immobile = {}
+                }
         end
-        ImmobileBuffs = { [GetBuffTypeList().Stun] = true, [GetBuffTypeList().Taunt] = true, [GetBuffTypeList().Snare] = true, [GetBuffTypeList().Fear] = true, [GetBuffTypeList().Charm] = true, [GetBuffTypeList().Suppression] = true, [GetBuffTypeList().Flee] = true, [GetBuffTypeList().Knockup] = true, [GetBuffTypeList().Knockback] = true }
+        ImmobileBuffs =
+        {
+                [GetBuffTypeList().Stun] = true,
+                [GetBuffTypeList().Taunt] = true,
+                [GetBuffTypeList().Snare] = true,
+                [GetBuffTypeList().Fear] = true,
+                [GetBuffTypeList().Charm] = true,
+                [GetBuffTypeList().Suppression] = true,
+                [GetBuffTypeList().Flee] = true,
+                [GetBuffTypeList().Knockup] = true,
+                [GetBuffTypeList().Knockback] = true
+        }
 end)
 
 -- O N  D R A W
 OnDraw(function(myHero)
-        if Config.ts.mts.a:Value() then
-                if Config.draw.se.a:Value() then
-                        if focus_target ~= nil then
-                                if Config.ts.mts.msr.a:Value() then
-                                        local dist = ComputeDistance(myHero.pos.x-focus_target.pos.x, myHero.pos.z-focus_target.pos.z)
-                                        if dist < Config.ts.mts.msr.r:Value() then
-                                                DrawCircle(focus_target.pos, 75, 3, 3, Config.draw.se.c:Value())
-                                        end
-                                else
-                                        DrawCircle(focus_target.pos, 75, 3, 3, Config.draw.se.c:Value())
-                                end
-                        end
-                end
+        if focus_target ~= nil then
+                DrawCircle(focus_target.pos, 75, 3, 3, Config.TS.color:Value())
         end
 end)
 
@@ -157,13 +118,14 @@ end)
 -- O N  P R O C E S S  S P E L L  A T T A C K
 OnProcessSpellAttack(function(unit, aa)
         if unit == myHero then
-                local attack_spell = GetTickCount()
-                attack_windup = attack_windup + ( attack_spell - attack_issue )
-                attack_animation = attack_animation + ( attack_spell - attack_issue )
+                aa_windup = aa.windUpTime * 1000
+                aa_animation = aa.animationTime * 1000
+                aa_last = GetTickCount()
+                return
         end
         local id = GetNetworkID(unit)
         if UtilsManager[id] then
-                UtilsManager[id].AACastDelay = aa.windUpTime
+                UtilsManager[id].AACastDelay = aa.windUpTime * 1000
                 UtilsManager[id].AALast = GetTickCount()
                 UtilsManager[id].IsAttacking = true
         end
@@ -171,12 +133,6 @@ end)
 
 -- O N  U P D A T E  B U F F
 OnUpdateBuff(function(unit, buff)
-        if unit == myHero then
-                local name = buff.Name
-                if name == "PowerFist" then
-                        attack_animation = 0
-                end
-        end
         local id = GetNetworkID(unit)
         if WaypointManager[id] then
                 local type = buff.Type
@@ -192,7 +148,7 @@ OnRemoveBuff(function(unit, buff)
         local id = GetNetworkID(unit)
         local et = buff.ExpireTime
         if UtilsManager[id] then
-                for i, b in ipairs(UtilsManager[id].Immobile) do
+                for i, b in pairs(UtilsManager[id].Immobile) do
                         if b.EndTime == et then
                                 table.remove(UtilsManager[id].Immobile, i)
                                 break
@@ -201,305 +157,57 @@ OnRemoveBuff(function(unit, buff)
         end
 end)
 
--- O N  I S S U E  O R D E R
-OnIssueOrder(function(order)
-        if order.flag == 3 then
-                attack_issue = GetTickCount()
-                local speed = GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero)
-                attack_windup = attack_issue + ( 270 / speed )
-                attack_animation = attack_issue + ( 1000 / speed )
-        end
-        if order.flag == 2 then
-                move_issue = GetTickCount() + 175
-        end
-end)
-
 -- O N  W N D  M S G
 OnWndMsg(function(msg, key)
-        if Config.ts.mts.a:Value() then
-                if key == 1 then
-                        local count = 0
-                        local e = nil
-                        for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
-                                local hp = GetCurrentHP(enemy)
-                                if hp ~= 0 then
-                                        local dist1 = ComputeDistance(enemy.pos.x - GetMousePos().x, enemy.pos.z - GetMousePos().z)
-                                        if dist1 < 150 then
-                                                if Config.ts.mts.msr.a:Value() then
-                                                        local dist2 = ComputeDistance(enemy.pos.x - myHero.pos.x, enemy.pos.z - myHero.pos.z)
-                                                        if dist2 < Config.ts.mts.msr.r:Value() then
-                                                                count = count + 1
-                                                                e = enemy
-                                                        end
-                                                else
-                                                        count = count + 1
-                                                        e = enemy
-                                                end
-                                        end
+        if key == 1 then
+                local count = 0
+                local target = nil
+                for _,enemy in pairs(GetEnemyHeroes()) do
+                        if ValidTarget(enemy, 9999) then
+                                if ComputeDistance(enemy.pos.x - GetMousePos().x, enemy.pos.z - GetMousePos().z) < 150 then
+                                        count = count + 1
+                                        target = enemy
                                 end
                         end
-                        if count >= 1 then
-                                focus_target = e
-                        else
-                                focus_target = nil
-                        end
+                end
+                if count == 1 then
+                        focus_target = target
+                elseif count == 0 then
+                        focus_target = nil
                 end
         end
 end)
 
 -- O N  T I C K
 OnTick(function (myHero)
-        if focus_target ~= nil and GetCurrentHP(focus_target) == 0 then
-            focus_target = nil
-        end
-        if Config.orbwalker.hk.c:Value() then
+        if Config.combo:Value() then
+                Orb()
                 if Ready(_Q) then
-                        local t = SelectTarget(920, false, false)
-                        if t ~= nil then
-                                local pos = GetPos(myHero, t, 920, 1800, 0.25, 120)
+                        local qt = GetSpellTarget(920)
+                        if qt ~= nil then
+                                local pos = GetPos(myHero, qt, 920, 1800, 0.25, 120)
                                 if pos and pos.x ~= 0 then
                                         CastSkillShot(_Q, pos)
                                 end
+                                if Ready(_E) and GotBuff(qt, "rocketgrab2") == 1 then
+                                        CastSpell(_E)
+                                end
                         end
-                elseif Ready(_R) then
-                        local t = SelectTarget(550, false, false)
-                        if t ~= nil then
-                                CastSpell(_R) 
-                        end
-                end
-                if Config.orbwalker.a:Value() then
-                        Orb()
                 end
                 if Ready(_E) then
-                        local t = SelectTarget(300, false, false)
-                        if t ~= nil then
-                                CastSpell(_E) 
+                        local et = GetSpellTarget(250)
+                        if et ~= nil then
+                                CastSpell(_E)
+                        end
+                end
+                if Ready(_R) then
+                        local rt = GetSpellTarget(550)
+                        if rt ~= nil then
+                                CastSpell(_R)
                         end
                 end
         end
 end)
-
--- T A R G E T   S E L E C T O R
-function ComputeTS(unit, AD)
-        if AD then return GetCurrentHP(unit) * ( GetArmor(unit) / ( GetArmor(unit) + 100 ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit) end
-        return GetCurrentHP(unit) * ( GetMagicResist(unit) / ( GetMagicResist(unit) + 100 ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit)
-end
-function SelectTarget(range, aa, ad)
-        local dist = range
-        if aa then
-                dist = GetRange(myHero) + GetHitBox(myHero)
-        end
-        if Config.ts.mts.a:Value() then
-                if focus_target ~= nil then
-                        if aa then
-                                dist = dist + GetHitBox(focus_target)
-                        end
-                        local dist2 = ComputeDistance(focus_target.pos.x - myHero.pos.x, focus_target.pos.z - myHero.pos.z)
-                        if Config.ts.mts.mtr.a:Value() then
-                                if dist2 < Config.ts.mts.mtr.r:Value() and dist2 > dist then
-                                        return nil
-                                elseif ValidTarget(focus_target, dist) then
-                                        return focus_target
-                                end
-                        else
-                                if ValidTarget(focus_target, dist) then
-                                        return focus_target
-                                else
-                                        return nil
-                                end
-                        end
-                end
-        end
-        local t1, t2, t3, t4, t5 = nil, nil, nil, nil, nil
-        local count, c1, c2, c3, c4, c5 = 0, 0, 0, 0, 0, 0
-        local tr1, tr2, tr3, tr4, tr5 = false, false, false, false, false
-        for a, enemy in ipairs(ObjectManager.Heroes.Enemies) do
-                if aa then
-                        dist = dist + GetHitBox(enemy)
-                end
-                local name = GetObjectName(enemy)
-                if Config.ts.fl[name]:Value() and ValidTarget(enemy, dist) then
-                        count = count + 1
-                        if a == 1 then
-                                t1 = enemy
-                                tr1 = true
-                                if ad then
-                                        c1 = ComputeTS(enemy, true)
-                                else
-                                        c1 = ComputeTS(enemy, false)
-                                end
-                        end
-                        if a == 2 then
-                                if not tr1 then
-                                        t1 = enemy
-                                        tr1 = true
-                                        if ad then
-                                                c1 = ComputeTS(enemy, true)
-                                        else
-                                                c1 = ComputeTS(enemy, false)
-                                        end
-                                else
-                                        t2 = enemy
-                                        tr2 = true
-                                        if ad then
-                                                c2 = ComputeTS(enemy, true)
-                                        else
-                                                c2 = ComputeTS(enemy, false)
-                                        end
-                                end
-                        end
-                        if a == 3 then
-                                if not tr1 then
-                                        t1 = enemy
-                                        tr1 = true
-                                        if ad then
-                                                c1 = ComputeTS(enemy, true)
-                                        else
-                                                c1 = ComputeTS(enemy, false)
-                                        end
-                                elseif not tr2 then
-                                        t2 = enemy
-                                        tr2 = true
-                                        if ad then
-                                                c2 = ComputeTS(enemy, true)
-                                        else
-                                                c2 = ComputeTS(enemy, false)
-                                        end
-                                else
-                                        t3 = enemy
-                                        tr3 = true
-                                        if ad then
-                                                c3 = ComputeTS(enemy, true)
-                                        else
-                                                c3 = ComputeTS(enemy, false)
-                                        end
-                                end
-                        end
-                        if a == 4 then
-                                if not tr1 then
-                                        t1 = enemy
-                                        tr1 = true
-                                        if ad then
-                                                c1 = ComputeTS(enemy, true)
-                                        else
-                                                c1 = ComputeTS(enemy, false)
-                                        end
-                                elseif not tr2 then
-                                        t2 = enemy
-                                        tr2 = true
-                                        if ad then
-                                                c2 = ComputeTS(enemy, true)
-                                        else
-                                                c2 = ComputeTS(enemy, false)
-                                        end
-                                elseif not tr3 then
-                                        t3 = enemy
-                                        tr3 = true
-                                        if ad then
-                                                c3 = ComputeTS(enemy, true)
-                                        else
-                                                c3 = ComputeTS(enemy, false)
-                                        end
-                                else
-                                        t4 = enemy
-                                        tr4 = true
-                                        if ad then
-                                                c4 = ComputeTS(enemy, true)
-                                        else
-                                                c4 = ComputeTS(enemy, false)
-                                        end
-                                end
-                        end
-                        if a == 5 then
-                                if not tr1 then
-                                        t1 = enemy
-                                        tr1 = true
-                                        if ad then
-                                                c1 = ComputeTS(enemy, true)
-                                        else
-                                                c1 = ComputeTS(enemy, false)
-                                        end
-                                elseif not tr2 then
-                                        t2 = enemy
-                                        tr2 = true
-                                        if ad then
-                                                c2 = ComputeTS(enemy, true)
-                                        else
-                                                c2 = ComputeTS(enemy, false)
-                                        end
-                                elseif not tr3 then
-                                        t3 = enemy
-                                        tr3 = true
-                                        if ad then
-                                                c3 = ComputeTS(enemy, true)
-                                        else
-                                                c3 = ComputeTS(enemy, false)
-                                        end
-                                elseif not tr4 then
-                                        t4 = enemy
-                                        tr4 = true
-                                        if ad then
-                                                c4 = ComputeTS(enemy, true)
-                                        else
-                                                c4 = ComputeTS(enemy, false)
-                                        end
-                                else
-                                        t5 = enemy
-                                        tr5 = true
-                                        if ad then
-                                                c5 = ComputeTS(enemy, true)
-                                        else
-                                                c5 = ComputeTS(enemy, false)
-                                        end
-                                end
-                        end
-                end
-        end
-        if count == 1 then
-                return t1
-        end
-        if count == 2 then
-                if c1 < c2 then
-                        return t1
-                else
-                        return t2
-                end
-        end
-        if count == 3 then
-                if c1 < c2 and c1 < c3 then
-                        return t1
-                elseif c2  < c1 and c2 < c3 then
-                        return t2
-                else
-                        return t3
-                end
-        end
-        if count == 4 then
-                if c1 < c2 and c1 < c3 and c1 < c4 then
-                        return t1
-                elseif c2  < c1 and c2 < c3 and c2 < c4 then
-                        return t2
-                elseif c3  < c1 and c3 < c2 and c3 < c4 then
-                        return t3
-                else
-                        return t4
-                end
-        end
-        if count == 5 then
-                if c1 < c2 and c1 < c3 and c1 < c4 and c1 < c5 then
-                        return t1
-                elseif c2  < c1 and c2 < c3 and c2 < c4 and c2 < c5 then
-                        return t2
-                elseif c3  < c1 and c3 < c2 and c3 < c4 and c3 < c5 then
-                        return t3
-                elseif c4  < c1 and c4 < c2 and c4 < c3 and c4 < c5 then
-                        return t4
-                else
-                        return t5
-                end
-        end
-        return nil
-end
 
 -- D I S T A N C E-
 function ComputeDistance(a, b)
@@ -513,46 +221,78 @@ function ComputeDirection(a, b)
 end
 
 
--- O R B W A L K E R
-function Orb()
-        local aat = SelectTarget(0, true, true)
-        if aat ~= nil then
-                if GetTickCount() > attack_animation then
-                        AttackUnit(aat)
-                end
-                if GetTickCount() > attack_windup then
-                        local pos = MovePred(aat)
-                        if pos then
-                                if GetTickCount() > move_issue then
-                                        MoveToXYZ(pos)
-                                end
+-- A D  AA  T A R G E T
+function GetAATarget()
+        local selectedtarget = GetSelectedTarget()
+        if selectedtarget ~= nil then
+                return selectedtarget
+        end
+        local dmg = 9999
+        local target = nil
+        for _,unit in pairs(GetEnemyHeroes()) do
+                if Config.TS.focus[GetObjectName(unit)]:Value() and ValidTarget(unit, GetRange(myHero) + GetHitBox(myHero) + GetHitBox(unit)) then
+                        local hp = ( GetCurrentHP(unit) * ( GetArmor(unit) / ( GetArmor(unit) + 100 ) ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit)
+                        if hp < dmg then
+                                dmg = hp
+                                target = unit
                         end
                 end
-        elseif GetTickCount() > attack_windup + 75 then
-                if GetTickCount() > move_issue then
-                        MoveToXYZ(GetMousePos())
+        end
+        return target
+end
+
+-- A P  S P E L L  T A R G E T
+function GetSpellTarget(range)
+        local selectedtarget = GetSelectedTarget()
+        if selectedtarget ~= nil then
+                return selectedtarget
+        end
+        local dmg = 9999
+        local target = nil
+        for _,unit in pairs(GetEnemyHeroes()) do
+                if Config.TS.focus[GetObjectName(unit)]:Value() and ValidTarget(unit, range) then
+                        local hp = ( GetCurrentHP(unit) * ( GetMagicResist(unit) / ( GetMagicResist(unit) + 100 ) ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit)
+                        if hp < dmg then
+                                dmg = hp
+                                target = unit
+                        end
                 end
         end
+        return target
 end
-function MovePred(unit)
-        if not Config.orbwalker.mm.a:Value() then
-                return GetMousePos()
+
+-- S E L E C T E D  T A R G E T
+function GetSelectedTarget()
+        local target = nil
+        if focus_target ~= nil and ValidTarget(focus_target, 1000) then
+                target = focus_target
         end
-        local unit_x = unit.pos.x
-        local unit_z = unit.pos.z
-        local mouse_x = GetMousePos().x
-        local mouse_z = GetMousePos().z
-        local dir = ComputeDirection(mouse_x-unit_x,mouse_z-unit_z)
-        local aarange = GetRange(myHero)
-        local go_to_pos_x = unit_x + ( dir.x * ( aarange + 100 ) )
-        local go_to_pos_z = unit_z + ( dir.z * ( aarange + 100 ) )
-        local dist = ComputeDistance(go_to_pos_x-myHero.pos.x, go_to_pos_z-myHero.pos.z)
-        return { x = go_to_pos_x, y = 0, z = go_to_pos_z }
+        return target
+end
+
+-- O R B W A L K E R
+function Orb()
+        if GetTickCount() > aa_last + aa_animation or GotBuff(myHero, "PowerFist") == 1 then
+                local aat = GetAATarget()
+                if aat ~= nil then
+                        AttackUnit(aat)
+                elseif GetTickCount() > aa_last + aa_windup + 50 then
+                        MoveToXYZ(GetMousePos())
+                end
+        elseif GetTickCount() > aa_last + aa_windup then
+                MoveToXYZ(GetMousePos())
+                if Ready(_E) then
+                        local et = GetSpellTarget(550)
+                        if et ~= nil then
+                                CastSpell(_E)
+                        end
+                end
+        end
 end
 
 -- P R E D I C T I O N
 function GetPos(startpos, endpos, range, speed, delay, width)
-        local hitchance = Config.pred.h:Value()
+        local hitchance = Config.hitchance:Value()
         local id = GetNetworkID(endpos)
         local way = WaypointManager[id]
         local util = UtilsManager[id]
@@ -561,9 +301,8 @@ function GetPos(startpos, endpos, range, speed, delay, width)
                 local az = startpos.pos.z
                 local bx = endpos.pos.x
                 local bz = endpos.pos.z
-                for m, minion in ipairs(ObjectManager.Minions.Enemies) do
-                        local hp = GetCurrentHP(minion)
-                        if hp ~= 0 then
+                for m, minion in pairs(minionManager.objects) do
+                        if minion.team == MINION_ENEMY and ValidTarget(minion, 1000) then
                                 local cx = minion.pos.x
                                 local cz = minion.pos.z
                                 local cbb = GetHitBox(minion)
@@ -574,10 +313,10 @@ function GetPos(startpos, endpos, range, speed, delay, width)
                                 local ab = ComputeDistance(b,a)
                                 local ac = ComputeDistance(c,az-cz)
                                 local bc = ComputeDistance(bx-cx,bz-cz)
-                                if ac < ab + 250 then
-                                        if bc < ab + 250 then
+                                if ac < ab + 100 then
+                                        if bc < ab + 100 then
                                                 local dist_obj_line = math.abs(a * c + b * d) / ab
-                                                local compute_max_obj_dist = width/2 + cbb/2
+                                                local compute_max_obj_dist = width/2 + cbb/2 + 50
                                                 if dist_obj_line < compute_max_obj_dist then
                                                         return { x = 0 }
                                                 end
@@ -681,34 +420,4 @@ function GetPos(startpos, endpos, range, speed, delay, width)
                         end
                 end
         end
-end
-
--- I N S E R T  T A B L E
-function Insert(t, o)
-        table.insert(t, o)
-        WaypointManager[GetNetworkID(o)] =
-        {
-                last =
-                {
-                        dir = {},
-                        time = 0,
-                        from = {},
-                        to = {},
-                        dist = 0,
-                        timeto = 0
-                },
-                second = {},
-                third = {}
-        }
-        UtilsManager[GetNetworkID(o)] =
-        {
-                CanMove = true,
-                IsMoving = false,
-                LastStopMoveTime = 0,
-                IsAttacking = false,
-                AALast = 0,
-                AACastDelay = 0,
-                IsImmobile = false,
-                Immobile = {}
-        }
 end
