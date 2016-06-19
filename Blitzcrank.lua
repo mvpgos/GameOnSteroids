@@ -13,7 +13,7 @@ require "GPrediction"
 local GPred = _G.gPred
 
 -- U P D A T E
-local ver = "1.95"
+local ver = "1.96"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -41,9 +41,9 @@ Config.TS:ColorPick("color", "Selected Target Color", {255,255,0,0})
 Config:Menu("PRED", "Prediction")
 --Config.PRED:Boolean("DASH", "Auto Q if enemy is dashing", true)
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 1, {"GamSterOn", "Open Predict", "GPrediction"})
-Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,1,10,1)
-Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 4,1,10,1)
-Config.PRED:Slider("GHITCHANCE", "GPrediction Hitchance", 3, 1,5,1)
+Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,3,10,1)
+Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 4,4,10,1)
+Config.PRED:Slider("GHITCHANCE", "GPrediction Hitchance", 3, 3,5,1)
 
 -- O N  L O A D
 OnLoad(function()
