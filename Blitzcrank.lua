@@ -13,7 +13,7 @@ require "GPrediction"
 local GPred = _G.gPred
 
 -- U P D A T E
-local ver = "1.94"
+local ver = "1.95"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -39,7 +39,7 @@ Config:Menu("TS", "GamSterOn Target Selector")
 Config.TS:Menu("focus", "Focus List")
 Config.TS:ColorPick("color", "Selected Target Color", {255,255,0,0})
 Config:Menu("PRED", "Prediction")
-Config.PRED:Boolean("DASH", "Auto Q if enemy is dashing", true)
+--Config.PRED:Boolean("DASH", "Auto Q if enemy is dashing", true)
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 1, {"GamSterOn", "Open Predict", "GPrediction"})
 Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,1,10,1)
 Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 4,1,10,1)
@@ -240,9 +240,7 @@ OnTick(function (myHero)
                 end
         else
                 SetAttackValue(false)
-                if Config.PRED.DASH:Value() then
-                        AutoQ()
-                end
+                -- if Config.PRED.DASH:Value() then AutoQ() end
         end
 end)
 
@@ -320,6 +318,7 @@ function GetSpellTarget(range)
         return target
 end
 
+--[[
 -- A U T O  Q  H I G H  H I T C H A N C E
 function AutoQ()
         if Ready(_Q) then
@@ -340,6 +339,7 @@ function AutoQ()
                 end
         end
 end
+--]]
 
 -- S E L E C T E D  T A R G E T
 function GetSelectedTarget()
