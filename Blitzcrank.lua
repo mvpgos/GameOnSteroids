@@ -12,43 +12,8 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local Q = {range = 925, maxrange = 925, radius = 70 , speed = 1750, delay = 0.25, type = "line"}
-
--- G P R E D I C T I O N  C O L L I S I O N https://github.com/KeVuong/GoS/blob/master/Support%20Bundle.lua#L639
-function MinionCollisitionCheck(pos)
-        --local objects = {}
-        local objects = 0
-        for _,minion in pairs(minionManager.objects) do
-                if minion.team ~= myHero.team and ValidTarget(minion,1200) then
-                        local pointSegment, pointLine, isOnSegment = VectorPointProjectionOnLineSegment(myHero.pos, pos, Vector(minion))
-                        if isOnSegment and GetDistance(pointSegment,minion) < Q.radius + minion.boundingRadius then
-                                --table.insert(objects,minion)
-                                objects = objects + 1
-                        end
-                end
-        end
-        --return #objects > 0, objects
-        return objects > 0
-end
-function HeroCollisitionCheck(pos, enemy)
-        --local objects = {}
-        local objects = 0
-        for _,unit in pairs(GetEnemyHeroes()) do
-                if unit ~= enemy and ValidTarget(unit,1200) then
-                        local pointSegment, pointLine, isOnSegment = VectorPointProjectionOnLineSegment(myHero.pos, pos, Vector(unit))
-                        if isOnSegment and GetDistance(pointSegment,unit) < Q.radius + unit.boundingRadius then
-                                --table.insert(objects,minion)
-                                -- DEBUG PrintChat("G "..GetObjectName(unit))
-                                objects = objects + 1
-                        end
-                end
-        end
-        --return #objects > 0, objects
-        return objects > 0
-end
-
 -- U P D A T E
-local ver = "1.91"
+local ver = "1.92"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -65,6 +30,7 @@ local UtilsManager = {}
 local ImmobileBuffs  = {}
 local WaypointManager = {}
 local focus_target = nil
+local Q = {range = 925, maxrange = 925, radius = 70 , speed = 1750, delay = 0.25, type = "line", col = {"minion","champion"}}
 
 -- M E N U
 Config = MenuConfig("GSO", "GamSterOn Blitzcrank")
@@ -248,14 +214,10 @@ OnTick(function (myHero)
                                                 CastSkillShot(_Q, pI.castPos)
                                         end
                                 else
-                                        local pI = GPred:GetPrediction(qt,myHero,Q)
+                                        local pI = GPred:GetPrediction(qt,myHero,Q, false, true)
                                         local hitchance = Config.PRED.GHITCHANCE:Value()
                                         if pI and pI.HitChance >= hitchance then
-                                              local mcol = MinionCollisitionCheck(pI.CastPosition)
-                                              local hcol = HeroCollisitionCheck(pI.CastPosition, qt)
-                                              if not mcol and not hcol then
-                                                      CastSkillShot(_Q, pI.CastPosition)
-                                              end
+                                                CastSkillShot(_Q, pI.CastPosition)
                                         end
                                 end
                         end
