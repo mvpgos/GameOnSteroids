@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "2.02"
+local ver = "2.03"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -33,10 +33,11 @@ Config.TS:Menu("focus", "Focus List")
 Config.TS:ColorPick("color", "Selected Target Color", {255,255,0,0})
 Config:Menu("CHECK", "Checks")
 Config.CHECK:KeyBinding("combo", "Combo", 32)
-Config.CHECK:Boolean("SEL", "Spells only on selected tar", true)
+Config.CHECK:Boolean("SEL", "Spells only on selected tar", false)
 Config.CHECK:Boolean("Q", "UseQ", true)
 Config.CHECK:Boolean("E", "UseE", true)
 Config.CHECK:Boolean("R", "UseR", true)
+Config.CHECK:Boolean("AUTOQ", "Auto Q", false)
 Config.CHECK:Boolean("DASH", "Auto Q on dash - GPred", true)
 Config.CHECK:Boolean("EQ", "Cast E if grab", true)
 Config.CHECK:Boolean("EAA", "Cast E if enemy in aa ran", true)
@@ -69,8 +70,13 @@ OnTick(function (myHero)
                         CastR()
                 end
         else
-                if Config.CHECK.Q:Value() and Config.CHECK.DASH:Value() then
-                        AutoQ()
+                if Config.CHECK.Q:Value() then
+                        if Config.CHECK.AUTOQ:Value() then
+                                CastQ()
+                        end
+                        if Config.CHECK.DASH:Value() then
+                                AutoQ()
+                        end
                 end
         end
 end)
