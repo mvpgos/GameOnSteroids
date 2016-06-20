@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "1.98"
+local ver = "1.99"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -139,7 +139,7 @@ function AutoQ()
                                 CastSkillShot(_Q, pI.CastPosition)
                                 canr = GetTickCount()
                                 if Config.CHECK.EQ:Value() then
-                                        cane = true
+                                        cane = GetTickCount()
                                 end
                         end
                 end
