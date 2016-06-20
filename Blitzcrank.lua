@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "1.99"
+local ver = "2.00"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -41,7 +41,6 @@ Config.CHECK:Boolean("Q", "UseQ", true)
 Config.CHECK:Boolean("E", "UseE", true)
 Config.CHECK:Boolean("R", "UseR", true)
 Config.CHECK:Boolean("DASH", "Auto Q on dash - GPred", true)
-Config.CHECK:Boolean("AA", "Disable AA if E Ready", true)
 Config.CHECK:Boolean("EQ", "Cast E if grab", true)
 Config.CHECK:Boolean("EAA", "Cast E if enemy in aa ran", true)
 Config:Menu("PRED", "Prediction")
@@ -55,9 +54,6 @@ OnLoad(function()
 end)
 
 OnTick(function (myHero)
-        if not Config.CHECK.AA:Value() then
-                SetAttackValue(false)
-        end
         if Config.CHECK.E:Value() and Config.CHECK.EQ:Value() then
                 if Ready(_E) and GetTickCount() > 250 + cane and GetTickCount() < 500 + cane then
                         CastSpell(_E)
@@ -74,9 +70,6 @@ OnTick(function (myHero)
                         CastR()
                 end
         else
-                if Config.CHECK.AA:Value() then
-                        SetAttackValue(false)
-                end
                 if Config.CHECK.Q:Value() and Config.CHECK.DASH:Value() then
                         AutoQ()
                 end
@@ -147,13 +140,7 @@ function AutoQ()
 end
 function CastE()
         if not Ready(_E) then
-                if Config.CHECK.AA:Value() then
-                        SetAttackValue(false)
-                end
                 return
-        end
-        if Config.CHECK.AA:Value() then
-                SetAttackValue(true)
         end
         local t = GetSpellTarget(325)
         if t == nil then
@@ -497,39 +484,4 @@ function InsertTable()
                 [GetBuffTypeList().Knockup] = true,
                 [GetBuffTypeList().Knockback] = true
         }
-end
-function SetAttackValue(check)
-        if GoSWalkLoaded then
-                if check == true then
-                        -- DEBUG PrintChat("t GosWalk")
-                        GoSWalk:EnableAttack(false)
-                else
-                        -- DEBUG PrintChat("f GosWalk")
-                        GoSWalk:EnableAttack(true)
-                end
-        elseif IOW_Loaded then
-                if check == true then
-                        -- DEBUG PrintChat("t IOW")
-                        IOW.attacksEnabled = false
-                else
-                        -- DEBUG PrintChat("f IOW")
-                        IOW.attacksEnabled = true
-                end
-        elseif DAC_Loaded then
-                if check == true then
-                        -- DEBUG PrintChat("t DAC")
-                        DAC.attacksEnabled = false
-                else
-                        -- DEBUG PrintChat("f DAC")
-                        DAC.attacksEnabled = true
-                end
-        elseif PW_Loaded then
-                if check == true then
-                        -- DEBUG PrintChat("t PW")
-                        PW.attacksEnabled = false
-                else
-                        -- DEBUG PrintChat("f PW")
-                        PW.attacksEnabled = true
-                end
-        end
 end
