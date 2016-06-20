@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "2.00"
+local ver = "2.01"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -182,13 +182,12 @@ OnDraw(function(myHero)
         end
 end)
 function GetSpellTarget(range)
-        local selectedtarget = GetSelectedTarget()
-        if selectedtarget ~= nil then
+        if focus_target ~= nil then
                 if not Config.CHECK.SEL:Value() and GetCurrentHP(focus_target) == 0 or ComputeDistance(focus_target.pos.x - myHero.pos.x, focus_target.pos.z - myHero.pos.z) > 3000 then
                         focus_target = nil
                 end
                 if ValidTarget(focus_target, range) then
-                        return selectedtarget
+                        return focus_target
                 end
                 return nil
         end
@@ -205,13 +204,6 @@ function GetSpellTarget(range)
                                 target = unit
                         end
                 end
-        end
-        return target
-end
-function GetSelectedTarget()
-        local target = nil
-        if focus_target ~= nil then
-                target = focus_target
         end
         return target
 end
