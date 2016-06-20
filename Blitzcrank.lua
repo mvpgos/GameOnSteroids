@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "2.04"
+local ver = "2.05"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -44,8 +44,8 @@ Config.CHECK:Boolean("EQ", "Cast E if grab", true)
 Config.CHECK:Boolean("EAA", "Cast E if enemy in aa ran", true)
 Config:Menu("PRED", "Prediction")
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 2, {"Open Predict", "GPrediction"})
-Config.PRED:Slider("OHITCHANCE", "Open Predict Min. Hitchance", 3,2,5,1)
-Config.PRED:Slider("GHITCHANCE", "GPrediction Min. Hitchance", 3, 2,3,1)
+Config.PRED:Slider("OHITCHANCE", "Open Predict Min. Hitchance", 3,2,10,1)
+Config.PRED:Slider("GHITCHANCE", "GPrediction Min. Hitchance", 3, 2,5,1)
 
 OnLoad(function()
         for _,o in pairs(GetEnemyHeroes()) do
