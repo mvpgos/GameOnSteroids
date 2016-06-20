@@ -1,4 +1,4 @@
-local ver = "0.02"
+local ver = "0.03"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         DownloadFileAsync("https://raw.githubusercontent.com/gamsteron/GameOnSteroids/master/AutoLVL.lua", SCRIPT_PATH .. "AutoLVL.lua", function() PrintChat("Update Complete, please 2x F6!") return end)
@@ -164,7 +164,7 @@ function GSOALULevelUp(level, dolvlfirst, dolvlsecond, dolvlfromtable)
                         else
                                 if GSOALU.HUMANIZER:Value() then
                                         DelayAction(function() LevelSpell(_W) end,num)
-                                end
+                                else
                                         LevelSpell(_W)
                                 end
                         end
