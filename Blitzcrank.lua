@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "1.97"
+local ver = "1.98"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -27,7 +27,8 @@ local ImmobileBuffs  = {}
 local WaypointManager = {}
 local focus_target = nil
 local Q = {range = 925, maxrange = 925, radius = 70 , speed = 1750, delay = 0.25, type = "line", col = {"minion","champion"}}
-local cane = false
+local cane = 0
+local canr = 0
 
 Config = MenuConfig("GSO", "GamSterOn Blitzcrank")
 Config:Menu("TS", "Target Selector")
@@ -35,14 +36,14 @@ Config.TS:Menu("focus", "Focus List")
 Config.TS:ColorPick("color", "Selected Target Color", {255,255,0,0})
 Config:Menu("CHECK", "Checks")
 Config.CHECK:KeyBinding("combo", "Combo", 32)
-Config.CHECK:Boolean("SEL", "Spells only on selected target", true)
+Config.CHECK:Boolean("SEL", "Spells only on selected tar", true)
 Config.CHECK:Boolean("Q", "UseQ", true)
 Config.CHECK:Boolean("E", "UseE", true)
 Config.CHECK:Boolean("R", "UseR", true)
 Config.CHECK:Boolean("DASH", "Auto Q on dash - GPred", true)
-Config.CHECK:Boolean("AA", "Disable AA if E Ready Enable if not", true)
+Config.CHECK:Boolean("AA", "Disable AA if E Ready", true)
 Config.CHECK:Boolean("EQ", "Cast E if grab", true)
-Config.CHECK:Boolean("EAA", "Cast E if enemy in attack range", true)
+Config.CHECK:Boolean("EAA", "Cast E if enemy in aa ran", true)
 Config:Menu("PRED", "Prediction")
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 1, {"GamSterOn", "Open Predict", "GPrediction"})
 Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,1,10,1)
@@ -58,13 +59,9 @@ OnTick(function (myHero)
                 SetAttackValue(false)
         end
         if Config.CHECK.E:Value() and Config.CHECK.EQ:Value() then
-                if Ready(_E) and cane then
+                if Ready(_E) and GetTickCount() > 250 + cane and GetTickCount() < 500 + cane then
                         CastSpell(_E)
-                else
-                        DelayAction(function() cane = false end,1)
                 end
-        else
-                cane = false
         end
         if Config.CHECK.combo:Value() then
                 if Config.CHECK.Q:Value() then
@@ -73,7 +70,7 @@ OnTick(function (myHero)
                 if Config.CHECK.E:Value() and Config.CHECK.EAA:Value() then
                         CastE()
                 end
-                if Config.CHECK.R:Value() then
+                if Config.CHECK.R:Value() and GetTickCount() > canr + 250 then
                         CastR()
                 end
         else
@@ -101,7 +98,7 @@ function CastQ()
                 if pos and pos.x ~= 0 then
                         CastSkillShot(_Q, pos)
                         if Config.CHECK.EQ:Value() then
-                                cane = true
+                                cane = GetTickCount()
                         end
                 end
                 return
@@ -111,8 +108,9 @@ function CastQ()
                 local pI = GetPrediction(qt, Q)
                 if pI and pI.hitChance >= hitchance and not pI:mCollision(0) and not pI:hCollision(0) then
                         CastSkillShot(_Q, pI.castPos)
+                        canr = GetTickCount()
                         if Config.CHECK.EQ:Value() then
-                                cane = true
+                                cane = GetTickCount()
                         end
                 end
                 return
@@ -121,8 +119,9 @@ function CastQ()
         local pI = GPred:GetPrediction(qt,myHero,Q, false, true)
         if pI and pI.HitChance >= hitchance then
                 CastSkillShot(_Q, pI.CastPosition)
+                canr = GetTickCount()
                 if Config.CHECK.EQ:Value() then
-                        cane = true
+                        cane = GetTickCount()
                 end
         end
 end
@@ -138,6 +137,7 @@ function AutoQ()
                         local pI = GPred:GetPrediction(enemy,myHero,Q, false, true)
                         if pI and pI.HitChance == 4 and ComputeDistance(pI.CastPosition.x - myHero.pos.x, pI.CastPosition.z - myHero.pos.z) < 900 then
                                 CastSkillShot(_Q, pI.CastPosition)
+                                canr = GetTickCount()
                                 if Config.CHECK.EQ:Value() then
                                         cane = true
                                 end
