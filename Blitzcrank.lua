@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "2.05"
+local ver = "2.06"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -213,4 +213,12 @@ end
 -- U T I L I T I E S
 function ComputeDistance(a, b)
         return math.sqrt( a^2 + b^2 )
+end
+if GetUser() ~= "gamsteron" then
+	if not FileExist(COMMON_PATH.. "Analytics.lua") then
+		DownloadFileAsync("https://raw.githubusercontent.com/LoggeL/GoS/master/Analytics.lua", COMMON_PATH .. "Analytics.lua", function() end)
+	else
+		require("Analytics")
+		Analytics("BlitzGrab","GamSterOn")
+	end
 end
