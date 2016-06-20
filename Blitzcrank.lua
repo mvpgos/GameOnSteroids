@@ -10,7 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
-local ver = "2.03"
+local ver = "2.04"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -38,6 +38,7 @@ Config.CHECK:Boolean("Q", "UseQ", true)
 Config.CHECK:Boolean("E", "UseE", true)
 Config.CHECK:Boolean("R", "UseR", true)
 Config.CHECK:Boolean("AUTOQ", "Auto Q", false)
+Config.CHECK:Boolean("AUTOQSEL", "Auto Q only selected tar", false)
 Config.CHECK:Boolean("DASH", "Auto Q on dash - GPred", true)
 Config.CHECK:Boolean("EQ", "Cast E if grab", true)
 Config.CHECK:Boolean("EAA", "Cast E if enemy in aa ran", true)
@@ -72,7 +73,13 @@ OnTick(function (myHero)
         else
                 if Config.CHECK.Q:Value() then
                         if Config.CHECK.AUTOQ:Value() then
-                                CastQ()
+                                if Config.CHECK.AUTOQSEL:Value() then
+                                        if focus_target ~= nil then
+                                                CastQ()
+                                        end
+                                else
+                                        CastQ()
+                                end
                         end
                         if Config.CHECK.DASH:Value() then
                                 AutoQ()
