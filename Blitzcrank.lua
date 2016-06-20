@@ -1,8 +1,6 @@
 if myHero.charName ~= "Blitzcrank" then
-  return 
+  return
 end
-
-BlockF7OrbWalk(true)
 
 require 'OpenPredict'
 if not FileExist(COMMON_PATH.."\\GPrediction.lua") then
@@ -12,8 +10,7 @@ end
 require "GPrediction"
 local GPred = _G.gPred
 
--- U P D A T E
-local ver = "1.96"
+local ver = "1.97"
 function AutoUpdate(data)
     if tonumber(data) > tonumber(ver) then
         PrintChat("New version found! " .. data)
@@ -25,80 +22,214 @@ function AutoUpdate(data)
 end
 GetWebResultAsync("https://raw.githubusercontent.com/gamsteron/GameOnSteroids/master/Blitzcrank.version", AutoUpdate)
 
--- V A R I A B L E S
 local UtilsManager = {}
 local ImmobileBuffs  = {}
 local WaypointManager = {}
 local focus_target = nil
 local Q = {range = 925, maxrange = 925, radius = 70 , speed = 1750, delay = 0.25, type = "line", col = {"minion","champion"}}
+local cane = false
 
--- M E N U
 Config = MenuConfig("GSO", "GamSterOn Blitzcrank")
-Config:KeyBinding("combo", "Combo", 32)
-Config:Menu("TS", "GamSterOn Target Selector")
+Config:Menu("TS", "Target Selector")
 Config.TS:Menu("focus", "Focus List")
 Config.TS:ColorPick("color", "Selected Target Color", {255,255,0,0})
+Config:Menu("CHECK", "Checks")
+Config.CHECK:KeyBinding("combo", "Combo", 32)
+Config.CHECK:Boolean("SEL", "Spells only on selected target", true)
+Config.CHECK:Boolean("Q", "UseQ", true)
+Config.CHECK:Boolean("E", "UseE", true)
+Config.CHECK:Boolean("R", "UseR", true)
+Config.CHECK:Boolean("DASH", "Auto Q on dash - GPred", true)
+Config.CHECK:Boolean("AA", "Disable AA if E Ready Enable if not", true)
+Config.CHECK:Boolean("EQ", "Cast E if grab", true)
+Config.CHECK:Boolean("EAA", "Cast E if enemy in attack range", true)
 Config:Menu("PRED", "Prediction")
---Config.PRED:Boolean("DASH", "Auto Q if enemy is dashing", true)
 Config.PRED:DropDown("SWITCH", "Prediction Mode ->", 1, {"GamSterOn", "Open Predict", "GPrediction"})
-Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,3,10,1)
-Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 6,6,10,1)
-Config.PRED:Slider("GHITCHANCE", "GPrediction Hitchance", 3, 3,5,1)
+Config.PRED:Slider("GSOHITCHANCE", "GamSterOn Hitchance", 3,1,10,1)
+Config.PRED:Slider("OHITCHANCE", "Open Predict Hitchance", 6,1,10,1)
+Config.PRED:Slider("GHITCHANCE", "GPrediction Hitchance", 3, 1,5,1)
 
--- O N  L O A D
 OnLoad(function()
-        for _,o in pairs(GetEnemyHeroes()) do
-                local name = GetObjectName(o)
-                local id = GetNetworkID(o)
-                Config.TS.focus:Boolean(name, name, true)
-                WaypointManager[id] =
-                {
-                        last =
-                        {
-                                dir = {},
-                                time = 0,
-                                from = {},
-                                to = {},
-                                dist = 0,
-                                timeto = 0
-                        },
-                        second = {},
-                        third = {}
-                }
-                UtilsManager[id] =
-                {
-                        CanMove = true,
-                        IsMoving = false,
-                        LastStopMoveTime = 0,
-                        IsAttacking = false,
-                        AALast = 0,
-                        AACastDelay = 0,
-                        IsImmobile = false,
-                        Immobile = {}
-                }
-        end
-        ImmobileBuffs =
-        {
-                [GetBuffTypeList().Stun] = true,
-                [GetBuffTypeList().Taunt] = true,
-                [GetBuffTypeList().Snare] = true,
-                [GetBuffTypeList().Fear] = true,
-                [GetBuffTypeList().Charm] = true,
-                [GetBuffTypeList().Suppression] = true,
-                [GetBuffTypeList().Flee] = true,
-                [GetBuffTypeList().Knockup] = true,
-                [GetBuffTypeList().Knockback] = true
-        }
+        InsertTable()
 end)
 
--- O N  D R A W
+OnTick(function (myHero)
+        if not Config.CHECK.AA:Value() then
+                SetAttackValue(false)
+        end
+        if Config.CHECK.E:Value() and Config.CHECK.EQ:Value() then
+                if Ready(_E) and cane then
+                        CastSpell(_E)
+                else
+                        DelayAction(function() cane = false end,1)
+                end
+        else
+                cane = false
+        end
+        if Config.CHECK.combo:Value() then
+                if Config.CHECK.Q:Value() then
+                        CastQ()
+                end
+                if Config.CHECK.E:Value() and Config.CHECK.EAA:Value() then
+                        CastE()
+                end
+                if Config.CHECK.R:Value() then
+                        CastR()
+                end
+        else
+                if Config.CHECK.AA:Value() then
+                        SetAttackValue(false)
+                end
+                if Config.CHECK.Q:Value() and Config.CHECK.DASH:Value() then
+                        AutoQ()
+                end
+        end
+end)
+
+-- C A S T  S P E L L S
+function CastQ()
+        if not Ready(_Q) then
+                return
+        end
+        local case = Config.PRED.SWITCH:Value()
+        local qt = GetSpellTarget(925)
+        if qt == nil then
+                return
+        end
+        if case == 1 then
+                local pos = GetPos(myHero, qt, 900, 1700, 0.25, 70)
+                if pos and pos.x ~= 0 then
+                        CastSkillShot(_Q, pos)
+                        if Config.CHECK.EQ:Value() then
+                                cane = true
+                        end
+                end
+                return
+        end
+        if case == 2 then
+                local hitchance = Config.PRED.OHITCHANCE:Value() * 0.1
+                local pI = GetPrediction(qt, Q)
+                if pI and pI.hitChance >= hitchance and not pI:mCollision(0) and not pI:hCollision(0) then
+                        CastSkillShot(_Q, pI.castPos)
+                        if Config.CHECK.EQ:Value() then
+                                cane = true
+                        end
+                end
+                return
+        end
+        local hitchance = Config.PRED.GHITCHANCE:Value()
+        local pI = GPred:GetPrediction(qt,myHero,Q, false, true)
+        if pI and pI.HitChance >= hitchance then
+                CastSkillShot(_Q, pI.CastPosition)
+                if Config.CHECK.EQ:Value() then
+                        cane = true
+                end
+        end
+end
+function AutoQ()
+        if Config.PRED.SWITCH:Value() < 3 then
+                return
+        end
+        if not Ready(_Q) then
+                return
+        end
+        for _,enemy in pairs(GetEnemyHeroes()) do
+                if ValidTarget(enemy, 1500) then
+                        local pI = GPred:GetPrediction(enemy,myHero,Q, false, true)
+                        if pI and pI.HitChance == 4 and ComputeDistance(pI.CastPosition.x - myHero.pos.x, pI.CastPosition.z - myHero.pos.z) < 900 then
+                                CastSkillShot(_Q, pI.CastPosition)
+                                if Config.CHECK.EQ:Value() then
+                                        cane = true
+                                end
+                        end
+                end
+        end
+end
+function CastE()
+        if not Ready(_E) then
+                if Config.CHECK.AA:Value() then
+                        SetAttackValue(false)
+                end
+                return
+        end
+        if Config.CHECK.AA:Value() then
+                SetAttackValue(true)
+        end
+        local t = GetSpellTarget(325)
+        if t == nil then
+                return
+        end
+        CastSpell(_E)
+end
+function CastR()
+        if not Ready(_R) then
+                return
+        end
+        local t = GetSpellTarget(525)
+        if t == nil then
+                return
+        end
+        CastSpell(_R)
+end
+
+-- T A R G E T  S E L E C T O R
+OnWndMsg(function(msg, key)
+        if msg == 513 then
+                local target = nil
+                local dist = 1000
+                for _,enemy in pairs(GetEnemyHeroes()) do
+                        if ValidTarget(enemy, 9999) then
+                                local d = ComputeDistance(enemy.pos.x - GetMousePos().x, enemy.pos.z - GetMousePos().z)
+                                if  d < dist and d < 200 then
+                                        dist = d
+                                        target = enemy
+                                end
+                        end
+                end
+                focus_target = target
+        end
+end)
 OnDraw(function(myHero)
         if focus_target ~= nil then
                 DrawCircle(focus_target.pos, 75, 3, 3, Config.TS.color:Value())
         end
 end)
+function GetSpellTarget(range)
+        local selectedtarget = GetSelectedTarget()
+        if selectedtarget ~= nil then
+                if not Config.CHECK.SEL:Value() and GetCurrentHP(focus_target) == 0 or ComputeDistance(focus_target.pos.x - myHero.pos.x, focus_target.pos.z - myHero.pos.z) > 3000 then
+                        focus_target = nil
+                end
+                if ValidTarget(focus_target, range) then
+                        return selectedtarget
+                end
+                return nil
+        end
+        if Config.CHECK.SEL:Value() then
+                return nil
+        end
+        local dmg = 9999
+        local target = nil
+        for _,unit in pairs(GetEnemyHeroes()) do
+                if Config.TS.focus[GetObjectName(unit)]:Value() and ValidTarget(unit, range) then
+                        local hp = ( GetCurrentHP(unit) * ( GetMagicResist(unit) / ( GetMagicResist(unit) + 100 ) ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit)
+                        if hp < dmg then
+                                dmg = hp
+                                target = unit
+                        end
+                end
+        end
+        return target
+end
+function GetSelectedTarget()
+        local target = nil
+        if focus_target ~= nil then
+                target = focus_target
+        end
+        return target
+end
 
--- O N  P R O C E S S  W A Y P  O I N T
+-- P R E D I C T I O N
 OnProcessWaypoint(function(unit,waypoint)
         local id = GetNetworkID(unit)
         local ms = GetMoveSpeed(unit)
@@ -129,8 +260,6 @@ OnProcessWaypoint(function(unit,waypoint)
                 end
         end
 end)
-
--- O N  P R O C E S S  S P E L L  A T T A C K
 OnProcessSpellAttack(function(unit, aa)
         local id = GetNetworkID(unit)
         if UtilsManager[id] then
@@ -139,8 +268,6 @@ OnProcessSpellAttack(function(unit, aa)
                 UtilsManager[id].IsAttacking = true
         end
 end)
-
--- O N  U P D A T E  B U F F
 OnUpdateBuff(function(unit, buff)
         local id = GetNetworkID(unit)
         if WaypointManager[id] then
@@ -151,8 +278,6 @@ OnUpdateBuff(function(unit, buff)
                 end
         end
 end)
-
--- O N  R E M O V E  B U F F
 OnRemoveBuff(function(unit, buff)
         local id = GetNetworkID(unit)
         local et = buff.ExpireTime
@@ -165,192 +290,6 @@ OnRemoveBuff(function(unit, buff)
                 end
         end
 end)
-
--- O N  W N D  M S G
-OnWndMsg(function(msg, key)
-        if msg == 513 then
-                local count = 0
-                local target = nil
-                for _,enemy in pairs(GetEnemyHeroes()) do
-                        if ValidTarget(enemy, 9999) then
-                                if ComputeDistance(enemy.pos.x - GetMousePos().x, enemy.pos.z - GetMousePos().z) < 150 then
-                                        count = count + 1
-                                        target = enemy
-                                end
-                        end
-                end
-                if count == 1 then
-                        focus_target = target
-                elseif count == 0 then
-                        focus_target = nil
-                end
-        end
-end)
-
--- O N  S P E L L  C A S T
-OnSpellCast(function(Spell)
-        if Spell.spellID == _Q then
-                if Ready(_E) then
-                        CastSpell(_E)
-                end
-        end
-end)
-
--- O N  T I C K
-OnTick(function (myHero)
-        if Config.combo:Value() then
-                if Ready(_Q) then
-                        local qt = GetSpellTarget(920)
-                        if qt ~= nil then
-                                local case = Config.PRED.SWITCH:Value()
-                                if case == 1 then
-                                        local pos = GetPos(myHero, qt, 920, 1700, 0.25, 120)
-                                        if pos and pos.x ~= 0 then
-                                                CastSkillShot(_Q, pos)
-                                        end
-                                elseif case == 2 then
-                                        local pI = GetPrediction(qt, Q)
-                                        local hitchance = Config.PRED.OHITCHANCE:Value() * 0.1
-                                        if pI and pI.hitChance >= hitchance and not pI:mCollision(0) and not pI:hCollision(0) then
-                                                CastSkillShot(_Q, pI.castPos)
-                                        end
-                                else
-                                        local pI = GPred:GetPrediction(qt,myHero,Q, false, true)
-                                        local hitchance = Config.PRED.GHITCHANCE:Value()
-                                        if pI and pI.HitChance >= hitchance then
-                                                CastSkillShot(_Q, pI.CastPosition)
-                                        end
-                                end
-                        end
-                end
-                if Ready(_E) then
-                        SetAttackValue(true)
-                        local et = GetSpellTarget(300)
-                        if et ~= nil then
-                                CastSpell(_E)
-                        end
-                else
-                        SetAttackValue(false)
-                end
-                if Ready(_R) then
-                        local rt = GetSpellTarget(550)
-                        if rt ~= nil then
-                                CastSpell(_R)
-                        end
-                end
-        else
-                SetAttackValue(false)
-                -- if Config.PRED.DASH:Value() then AutoQ() end
-        end
-end)
-
--- S E T  A T T A C K  V A L U E
-function SetAttackValue(check)
-        if GoSWalkLoaded then
-                if check == true then
-                        -- DEBUG PrintChat("t GosWalk")
-                        GoSWalk:EnableAttack(false)
-                else
-                        -- DEBUG PrintChat("f GosWalk")
-                        GoSWalk:EnableAttack(true)
-                end
-        elseif IOW_Loaded then
-                if check == true then
-                        -- DEBUG PrintChat("t IOW")
-                        IOW.attacksEnabled = false
-                else
-                        -- DEBUG PrintChat("f IOW")
-                        IOW.attacksEnabled = true
-                end
-        elseif DAC_Loaded then
-                if check == true then
-                        -- DEBUG PrintChat("t DAC")
-                        DAC.attacksEnabled = false
-                else
-                        -- DEBUG PrintChat("f DAC")
-                        DAC.attacksEnabled = true
-                end
-        elseif PW_Loaded then
-                if check == true then
-                        -- DEBUG PrintChat("t PW")
-                        PW.attacksEnabled = false
-                else
-                        -- DEBUG PrintChat("f PW")
-                        PW.attacksEnabled = true
-                end
-        end
-end
-
--- D I S T A N C E-
-function ComputeDistance(a, b)
-        return math.sqrt( a^2 + b^2 )
-end
-
--- D I R E C T I O N
-function ComputeDirection(a, b)
-        local c = ComputeDistance(a, b)
-        return { x = a/c, z = b/c }
-end
-
--- A P  S P E L L  T A R G E T
-function GetSpellTarget(range)
-        local selectedtarget = GetSelectedTarget()
-        if selectedtarget ~= nil then
-                if GetCurrentHP(focus_target) == 0 or ComputeDistance(focus_target.pos.x - myHero.pos.x, focus_target.pos.z - myHero.pos.z) > 3000 then
-                        focus_target = nil
-                end
-                if ValidTarget(focus_target, range) then
-                        return selectedtarget
-                end
-                return nil
-        end
-        local dmg = 9999
-        local target = nil
-        for _,unit in pairs(GetEnemyHeroes()) do
-                if Config.TS.focus[GetObjectName(unit)]:Value() and ValidTarget(unit, range) then
-                        local hp = ( GetCurrentHP(unit) * ( GetMagicResist(unit) / ( GetMagicResist(unit) + 100 ) ) ) - ( ( GetBaseDamage(unit) + GetBonusDmg(unit) ) * GetAttackSpeed(myHero) * GetBaseAttackSpeed(myHero) ) - GetBonusAP(unit)
-                        if hp < dmg then
-                                dmg = hp
-                                target = unit
-                        end
-                end
-        end
-        return target
-end
-
---[[
--- A U T O  Q  H I G H  H I T C H A N C E
-function AutoQ()
-        if Ready(_Q) then
-                local qt = GetSpellTarget(920)
-                if qt ~= nil then
-                        local case = Config.PRED.SWITCH:Value()
-                        if case == 2 then
-                                local pI = GetPrediction(qt, Q)
-                                if pI and pI.hitChance == 0.99 and not pI:mCollision(0) and not pI:hCollision(0) then
-                                        CastSkillShot(_Q, pI.castPos)
-                                end
-                        elseif case == 3 then
-                                local pI = GPred:GetPrediction(qt,myHero,Q, false, true)
-                                if pI and pI.HitChance == 4 then
-                                        CastSkillShot(_Q, pI.CastPosition)
-                                end
-                        end
-                end
-        end
-end
---]]
-
--- S E L E C T E D  T A R G E T
-function GetSelectedTarget()
-        local target = nil
-        if focus_target ~= nil then
-                target = focus_target
-        end
-        return target
-end
-
--- P R E D I C T I O N
 function GetPos(startpos, endpos, range, speed, delay, width)
         local hitchance = Config.PRED.GSOHITCHANCE:Value()
         local id = GetNetworkID(endpos)
@@ -503,6 +442,94 @@ function GetPos(startpos, endpos, range, speed, delay, width)
                                         return endpos.pos
                                 end
                         end
+                end
+        end
+end
+
+-- U T I L I T I E S
+function ComputeDistance(a, b)
+        return math.sqrt( a^2 + b^2 )
+end
+function ComputeDirection(a, b)
+        local c = ComputeDistance(a, b)
+        return { x = a/c, z = b/c }
+end
+function InsertTable()
+        for _,o in pairs(GetEnemyHeroes()) do
+                local name = GetObjectName(o)
+                local id = GetNetworkID(o)
+                Config.TS.focus:Boolean(name, name, true)
+                WaypointManager[id] =
+                {
+                        last =
+                        {
+                                dir = {},
+                                time = 0,
+                                from = {},
+                                to = {},
+                                dist = 0,
+                                timeto = 0
+                        },
+                        second = {},
+                        third = {}
+                }
+                UtilsManager[id] =
+                {
+                        CanMove = true,
+                        IsMoving = false,
+                        LastStopMoveTime = 0,
+                        IsAttacking = false,
+                        AALast = 0,
+                        AACastDelay = 0,
+                        IsImmobile = false,
+                        Immobile = {}
+                }
+        end
+        ImmobileBuffs =
+        {
+                [GetBuffTypeList().Stun] = true,
+                [GetBuffTypeList().Taunt] = true,
+                [GetBuffTypeList().Snare] = true,
+                [GetBuffTypeList().Fear] = true,
+                [GetBuffTypeList().Charm] = true,
+                [GetBuffTypeList().Suppression] = true,
+                [GetBuffTypeList().Flee] = true,
+                [GetBuffTypeList().Knockup] = true,
+                [GetBuffTypeList().Knockback] = true
+        }
+end
+function SetAttackValue(check)
+        if GoSWalkLoaded then
+                if check == true then
+                        -- DEBUG PrintChat("t GosWalk")
+                        GoSWalk:EnableAttack(false)
+                else
+                        -- DEBUG PrintChat("f GosWalk")
+                        GoSWalk:EnableAttack(true)
+                end
+        elseif IOW_Loaded then
+                if check == true then
+                        -- DEBUG PrintChat("t IOW")
+                        IOW.attacksEnabled = false
+                else
+                        -- DEBUG PrintChat("f IOW")
+                        IOW.attacksEnabled = true
+                end
+        elseif DAC_Loaded then
+                if check == true then
+                        -- DEBUG PrintChat("t DAC")
+                        DAC.attacksEnabled = false
+                else
+                        -- DEBUG PrintChat("f DAC")
+                        DAC.attacksEnabled = true
+                end
+        elseif PW_Loaded then
+                if check == true then
+                        -- DEBUG PrintChat("t PW")
+                        PW.attacksEnabled = false
+                else
+                        -- DEBUG PrintChat("f PW")
+                        PW.attacksEnabled = true
                 end
         end
 end
